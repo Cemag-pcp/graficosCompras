@@ -20,7 +20,6 @@ sa = gspread.service_account(filename)
 sh = sa.open(sheet)
 wks = sh.worksheet(worksheet)
 
-
 ## Conectando com google sheets e acessando Análise Previsão de Consumo (CMM / NTP ) DEE
 
 sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
@@ -38,8 +37,12 @@ cabecalho = wks1.row_values(2)
 df = df.set_axis(cabecalho, axis=1)
 df = df.iloc[2:]
 df['produto'] = df['Código'] + " - " + df['Descrição']
-df = df[['produto', 'Média 3M']]
-df = df[df['Média 3M']!=''].reset_index(drop=True).iloc[:df.shape[0]-1]
+
+df = df[['produto', 'Média 3M', 'Cons Mes\nAnterior', 'DEE - Dias Em Est.']]
+df = df[df['Média 3M']!=''].reset_index(drop=True)
+df = df.iloc[:df.shape[0]-1]
+
+#df.columns
 
 #transformando coluna de média 3m em númerico
 df['Média 3M'] = df['Média 3M'].apply(lambda x: float(x.replace('.', '').replace(',', '.')))
@@ -63,15 +66,17 @@ for i in range(len(grupoUnico)):
 selectGrupo  = st.selectbox("Escolha um grupo de material: ", lista_grupos)
 
 @st.cache()
-def load_data(grupo, selectGrupo):
+def load_data(grupo):
     
     df = pd.DataFrame()
 
-    grupo = grupo[grupo['grupo'] == selectGrupo].reset_index(drop=True)
+    my_bar = st.progress(0)
 
     for produto in range(len(grupo)):
-
+        
         time.sleep(2)
+
+        my_bar.progress(produto + 1)
 
         wks.update('AA2', grupo['produto'][produto])
         
@@ -106,11 +111,19 @@ def load_data(grupo, selectGrupo):
         
         df = df.append(teste, ignore_index=True)
     
+    df.to_csv("dados.csv")
+
     return df
-   
+
+if st.button("Atualizar"):
+    load_data(grupo)
+
 if selectGrupo != 'Selecione':
-    df = load_data(grupo, selectGrupo)
-    st.dataframe(df)
+    
+    df = pd.read_csv('dados.csv')
+    #st.dataframe(df)
+    
+    df = df[df['grupo'] == selectGrupo].reset_index(drop=True)
     produtosUnico = df['produto'].unique()
 
     for produto in range(len(produtosUnico)):
@@ -126,7 +139,7 @@ if selectGrupo != 'Selecione':
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb2'], y=df_grafico['estoque minimo_tb2'], mode='lines', name='Estoque mínimo'))
 
         fig.update_layout(title=titulo, xaxis_title='Data', yaxis_title='Valor')
-
+        
         st.plotly_chart(fig)
 
 ## Plotando gráficos
