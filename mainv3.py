@@ -12,7 +12,7 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
-@st.cache()
+@st.cache_data()
 def load_sheets():
 
     filename = 'service_account.json'
@@ -71,9 +71,9 @@ def load_sheets():
 
     return dfSimulacao, dfDatas, dfPedidos
 
-@st.cache()
+@st.cache_data()
 def tratamento():
-#tratando dataframes
+
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
 
     dfDatasDiasUteis = dfDatas[dfDatas['natureza_tb1'] == 'saida'][['datas_tb1']]
@@ -119,17 +119,20 @@ def tratamento():
     tabelaGeralDataProduto = tabelaGeralDataProduto.rename(columns={'Qde Ped':'entradas'})
 
     qtdProdutosUnico = len(tabelaGeralDataProduto['produto'].unique())
-
+    
     tabelaFinal = pd.DataFrame()
 
     for i in range(qtdProdutosUnico):
         
-        tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == tabelaGeralDataProduto['produto'][i]].reset_index(drop=True)
+        produtosUnicos = tabelaGeralDataProduto['produto'].unique()
+
+        produto = produtosUnicos[i]
+        tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == produto].reset_index(drop=True)
         tabelaFiltrada.reset_index(drop=True, inplace=True) 
         tabelaFiltrada['saldoAtual'] = ''
         
         try:
-            saldoAtual = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][i]].reset_index(drop=True)['Estoque Total'][0]       
+            saldoAtual = dfProdutos[dfProdutos['produto'] == produto].reset_index(drop=True)['Estoque Total'][0]       
         except:
             continue
 
@@ -155,27 +158,28 @@ def tratamento():
 
     tabelaFinal = tabelaFinal.merge(dfProdutos, on='produto')
 
-    corrigido = tabelaGeralDataProduto.copy()
-    corrigido = corrigido.merge(tabelaProdutoGrupo)
-    corrigido = corrigido[corrigido['natureza'] == 'saida'][['datas_tb1','produto', 'grupo']].dropna()
+    corrigido = tabelaFinal.copy()
+    #corrigido = tabelaFinal.merge(corrigido)
+    corrigido = corrigido[corrigido['natureza'] == 'saida'][['datas_tb1','produto', 'grupo']]
 
     compraMaxima = dfProdutos[['produto','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario']]
-
-    qtdProdutosUnico = len(dfProdutos['produto'].unique())
-
+ 
     corrigido['valorCorrigido'] = 0
 
     tbCorrigida = pd.DataFrame()
 
     for i in range(qtdProdutosUnico):
         
-        dados = corrigido[corrigido['produto'] == dfProdutos['produto'][i]].reset_index(drop=True)
-        
+        try:
+            dados = corrigido[corrigido['produto'] == dfProdutos['produto'][i]].reset_index(drop=True)
+        except:
+            dados = pd.DataFrame()
+
         if len(dados) != 0:
 
             if dados['grupo'][0] != 'Chapas':
 
-                maximo = compraMaxima[compraMaxima['produto'] == '120250 - CHAPA #11(3,04) A36/CIVIL300'].reset_index(drop=True)[['Média 3M']].values.tolist()[0][0]
+                maximo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Média 3M']].values.tolist()[0][0]
 
                 saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
 
@@ -218,9 +222,14 @@ def tratamento():
 
                 consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
 
-                dados.reset_index(drop=True)['valorCorrigido'][0] = saldoInicial 
+                dados = dados.reset_index(drop=True) 
 
-                for j in range(1,len(dados)+1):
+                dados['valorCorrigido'][0] = saldoInicial
+
+                j = 1
+                dimensao = dados.shape[0]
+
+                while j <= dimensao:
                     
                     if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
                         
@@ -238,39 +247,58 @@ def tratamento():
                         dados.index = dados.index.astype('float64')
 
                         dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
+                        
+                        dimensao = dados.shape[0]
+
+                        j = j + 1
 
                     else:
                         
                         dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
+
+                        dimensao = dados.shape[0]
+
+                        j = j + 1
 
             tbCorrigida = tbCorrigida.append(dados)
         
         else:
             continue
 
-    return tbCorrigida, tabelaFinal
+    return tbCorrigida, tabelaFinal, dfProdutos
 
-tbGrupo = pd.read_csv('grupo.csv', sep=';') 
-tbGrupo = tbGrupo[['grupo']]
+dfGrupo = pd.read_csv('grupo.csv', sep=';') 
+
+tbGrupo = dfGrupo[['grupo']]
+tbProduto = dfGrupo[['produto']]
+
 grupoUnico = tbGrupo['grupo'].unique()
+produtoUnico = tbProduto['produto'].unique()
 
 listaGrupos = ['Selecione']
+listaProdutos = ['Selecione']
 
 for i in range(len(grupoUnico)):
     listaGrupos.append(grupoUnico[i])
 
-selectGrupo = st.selectbox("Selecione: ", listaGrupos)
+for i in range(len(produtoUnico)):
+    listaProdutos.append(produtoUnico[i])
+
+with st.sidebar:
+    selectGrupo = st.selectbox("Selecione o grupo: ", listaGrupos)
+    selectProduto = st.selectbox("Selecione o produto: ", listaProdutos)
 
 if selectGrupo != 'Selecione':
-    tbCorrigida, tabelaFinal = tratamento()
+
+    tbCorrigida, tabelaFinal, dfProdutos = tratamento()
 
     tbCorrigida = tbCorrigida[tbCorrigida['grupo'] == selectGrupo]
     tabelaFinal = tabelaFinal[tabelaFinal['grupo'] == selectGrupo]
 
-    produtosUnico = tabelaFinal['produto'].unique()
+    produtosUnico = tbCorrigida['produto'].unique()
 
     for produto in range(len(produtosUnico)):
-
+        
         df_grafico = tabelaFinal[tabelaFinal['produto'] == produtosUnico[produto]]
         df_grafico1 = tbCorrigida[tbCorrigida['produto'] == produtosUnico[produto]]
 
@@ -285,3 +313,33 @@ if selectGrupo != 'Selecione':
         fig.update_layout(title=titulo, xaxis_title='Data', yaxis_title='Valor')
 
         st.plotly_chart(fig)
+
+        dfProdutos[dfProdutos['produto'] == produtosUnico[produto]]
+
+if selectProduto != 'Selecione':
+
+    tbCorrigida, tabelaFinal, dfProdutos = tratamento()
+
+    tbCorrigida = tbCorrigida[tbCorrigida['produto'] == selectProduto]
+    tabelaFinal = tabelaFinal[tabelaFinal['produto'] == selectProduto]
+
+    produtosUnico = tbCorrigida['produto'].unique()
+
+    for produto in range(len(produtosUnico)):
+        
+        df_grafico = tabelaFinal[tabelaFinal['produto'] == produtosUnico[produto]]
+        df_grafico1 = tbCorrigida[tbCorrigida['produto'] == produtosUnico[produto]]
+
+        titulo = 'Produto: ' + produtosUnico[produto]
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['saldoAtual'], mode='lines', name='Consumo real'))
+        fig.add_trace(go.Scatter(x=df_grafico1['datas_tb1'], y=df_grafico1['valorCorrigido'], mode='lines', name='Consumo corrigido'))
+        fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['estoqueMinimo'], mode='lines', name='Estoque mínimo'))
+
+        fig.update_layout(title=titulo, xaxis_title='Data', yaxis_title='Valor')
+
+        st.plotly_chart(fig)
+
+        dfProdutos[dfProdutos['produto'] == produtosUnico[produto]]
