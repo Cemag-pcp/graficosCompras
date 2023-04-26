@@ -9,6 +9,8 @@ import time
 import datetime
 from datetime import datetime
 import numpy as np
+from gspread_dataframe import set_with_dataframe
+
 
 warnings.filterwarnings("ignore")
 
@@ -32,7 +34,7 @@ def load_sheets():
     dfDatas = pd.DataFrame(dfDatas)
     dfDatas.set_axis(cabecalho, axis=1, inplace=True)
     dfDatas = dfDatas.iloc[2:]
-
+        
     ## Conectando com google sheets e acessando Análise Previsão de Consumo (CMM / NTP ) DEE
 
     sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
