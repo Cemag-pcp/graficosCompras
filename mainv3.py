@@ -95,7 +95,7 @@ def tratamento():
     dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['Prev Con Mov Est(CMM)'] = dfProdutos['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['consumoDiario'] = dfProdutos['Média 3M'] * 3 / 60
-    dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 5
+    dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 10
 
     tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=';')
 
