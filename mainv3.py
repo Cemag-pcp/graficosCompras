@@ -266,6 +266,7 @@ def tratamento():
         
         else:
             continue
+    
 
     return tbCorrigida, tabelaFinal, dfProdutos
 
@@ -296,7 +297,9 @@ if selectGrupo != 'Selecione':
 
     tbCorrigida = tbCorrigida[tbCorrigida['grupo'] == selectGrupo]
     tabelaFinal = tabelaFinal[tabelaFinal['grupo'] == selectGrupo]
-
+    
+    tabelaFinal['valor_0'] = 0
+    
     produtosUnico = tbCorrigida['produto'].unique()
 
     for produto in range(len(produtosUnico)):
@@ -309,6 +312,7 @@ if selectGrupo != 'Selecione':
         fig = go.Figure()
 
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['saldoAtual'], mode='lines', name='Consumo real'))
+        fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['valor_0'], mode='lines', name='zero'))
         fig.add_trace(go.Scatter(x=df_grafico1['datas_tb1'], y=df_grafico1['valorCorrigido'], mode='lines', name='Consumo corrigido'))
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['estoqueMinimo'], mode='lines', name='Estoque mínimo'))
 
@@ -325,6 +329,8 @@ if selectProduto != 'Selecione':
     tbCorrigida = tbCorrigida[tbCorrigida['produto'] == selectProduto]
     tabelaFinal = tabelaFinal[tabelaFinal['produto'] == selectProduto]
 
+    tabelaFinal['valor_0'] = 0
+
     produtosUnico = tbCorrigida['produto'].unique()
 
     for produto in range(len(produtosUnico)):
@@ -337,6 +343,7 @@ if selectProduto != 'Selecione':
         fig = go.Figure()
 
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['saldoAtual'], mode='lines', name='Consumo real'))
+        fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['valor_0'], mode='lines', name='zero'))
         fig.add_trace(go.Scatter(x=df_grafico1['datas_tb1'], y=df_grafico1['valorCorrigido'], mode='lines', name='Consumo corrigido'))
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['estoqueMinimo'], mode='lines', name='Estoque mínimo'))
 
