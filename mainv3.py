@@ -278,7 +278,9 @@ def tratamento():
 
                         j = j + 1
 
-            tbCorrigida = tbCorrigida.append(dados)
+            #tbCorrigida = tbCorrigida.append(dados)
+            tbCorrigida = pd.concat([tbCorrigida, dados])
+
         
         else:
             continue
