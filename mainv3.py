@@ -9,7 +9,6 @@ import time
 import datetime
 from datetime import datetime
 import numpy as np
-from gspread_dataframe import set_with_dataframe
 
 warnings.filterwarnings("ignore")
 
