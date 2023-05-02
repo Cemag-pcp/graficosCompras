@@ -11,7 +11,6 @@ from datetime import datetime
 import numpy as np
 from gspread_dataframe import set_with_dataframe
 
-
 warnings.filterwarnings("ignore")
 
 @st.cache_data()
@@ -90,6 +89,9 @@ def tratamento():
     tabelaGeralDataProduto = tabelaGeralDataProduto.sort_values(by='datas_tb1')
     tabelaGeralDataProduto['natureza'] = 'saida'
 
+    dezDiasUteis = tabelaGeralDataProduto['datas_tb1'].drop_duplicates().reset_index(drop=True)
+    dezDiasUteis = dezDiasUteis.loc[0:9].tolist()
+
     dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev Con Mov Est(CMM)']]
 
     dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
@@ -97,7 +99,7 @@ def tratamento():
     dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['Prev Con Mov Est(CMM)'] = dfProdutos['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['consumoDiario'] = dfProdutos['Média 3M'] * 3 / 60
-    dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 5
+    dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 10
 
     tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=';')
 
@@ -124,6 +126,13 @@ def tratamento():
     
     tabelaFinal = pd.DataFrame()
 
+    # média dos primeiros dez dias úteis
+
+    # dfDezDias = tabelaFinal[tabelaFinal['datas_tb1'].isin(dezDiasUteis)]    
+    # dfDezDias['consumoDiario'] *= 10
+    
+    # tabelaFinal.loc[tabelaFinal["datas_tb1"].isin(dezDiasUteis), "consumoDiario"] = dfDezDias["consumoDiario"]
+
     for i in range(qtdProdutosUnico):
         
         produtosUnicos = tabelaGeralDataProduto['produto'].unique()
@@ -137,10 +146,15 @@ def tratamento():
             saldoAtual = dfProdutos[dfProdutos['produto'] == produto].reset_index(drop=True)['Estoque Total'][0]       
         except:
             continue
+                    
+        tabelaFiltrada = tabelaFiltrada.sort_values(by=['natureza'], ascending=False)
+        tabelaFiltrada = tabelaFiltrada.sort_values(by=['datas_tb1'], ascending=True)
+        
+        tabelaFiltrada = tabelaFiltrada.reset_index(drop=True)
 
         tabelaFiltrada['saldoAtual'][0] = saldoAtual
 
-        for j in range(1,len(tabelaFiltrada)):
+        for j in range(1, len(tabelaFiltrada)):
             
             consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
             entrada = tabelaFiltrada['entradas'][j]
@@ -149,14 +163,15 @@ def tratamento():
             if tabelaFiltrada['natureza'][j] == 'entrada':
                 
                 tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) + float(entrada)
-                
-            else:
+
+            else:    
 
                 tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) - float(consumoDiario)
+                
 
         tabelaFinal = tabelaFinal.append(tabelaFiltrada)
-
-    tabelaFinal.reset_index(drop=True, inplace=True)
+    
+    tabelaFinal['produto'].reset_index(drop=True, inplace=True)
 
     tabelaFinal = tabelaFinal.merge(dfProdutos, on='produto')
 
@@ -267,7 +282,6 @@ def tratamento():
         else:
             continue
     
-
     return tbCorrigida, tabelaFinal, dfProdutos
 
 dfGrupo = pd.read_csv('grupo.csv', sep=';') 
