@@ -169,8 +169,9 @@ def tratamento():
                 tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) - float(consumoDiario)
                 
 
-        tabelaFinal = tabelaFinal.append(tabelaFiltrada)
-    
+        #tabelaFinal = tabelaFinal.append(tabelaFiltrada)
+        tabelaFinal = pd.concat([tabelaFinal, tabelaFiltrada])
+
     tabelaFinal['produto'].reset_index(drop=True, inplace=True)
 
     tabelaFinal = tabelaFinal.merge(dfProdutos, on='produto')
