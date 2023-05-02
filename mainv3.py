@@ -30,7 +30,7 @@ def load_sheets():
     
     dfDatas = wks.get()
     dfDatas = pd.DataFrame(dfDatas)
-    dfDatas.set_axis(cabecalho, axis=1, inplace=True)
+    dfDatas.set_axis(cabecalho, axis=1, copy=False)
     dfDatas = dfDatas.iloc[2:]
         
     ## Conectando com google sheets e acessando Análise Previsão de Consumo (CMM / NTP ) DEE
