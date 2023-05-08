@@ -378,6 +378,10 @@ if selectGrupo != 'Selecione':
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
 
+    tbCorrigida.dropna(inplace=True)
+    tabelaFinal.dropna(inplace=True)
+    dfProdutos.dropna(inplace=True)
+
     tbCorrigida = tbCorrigida[tbCorrigida['grupo'] == selectGrupo]
     tabelaFinal = tabelaFinal[tabelaFinal['grupo'] == selectGrupo]
     
@@ -414,6 +418,10 @@ if selectGrupo != 'Selecione':
 if selectProduto != 'Selecione':
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
+    
+    tbCorrigida.dropna(inplace=True)
+    tabelaFinal.dropna(inplace=True)
+    dfProdutos.dropna(inplace=True)
 
     tbCorrigida = tbCorrigida[tbCorrigida['produto'] == selectProduto]
     tabelaFinal = tabelaFinal[tabelaFinal['produto'] == selectProduto]
