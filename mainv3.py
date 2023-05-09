@@ -135,14 +135,11 @@ def tratamento():
     # tabelaFinal.loc[tabelaFinal["datas_tb1"].isin(dezDiasUteis), "consumoDiario"] = dfDezDias["consumoDiario"]
 
     dfDezDias = pd.read_csv("dezdias.csv", sep=';', encoding='iso-8859-1')
+    colunas = ['Recurso','Quantidade#Saída']
+    dfDezDias = dfDezDias.set_axis(colunas,axis=1,copy=False)
+
     dfDezDias = dfDezDias.replace('"',"", regex=True)
     dfDezDias = dfDezDias.replace('=',"", regex=True)
-
-    for col in dfDezDias.columns:
-        dfDezDias.rename(columns={col: col.replace('=', '')}, inplace=True)
-    
-    for col in dfDezDias.columns:
-        dfDezDias.rename(columns={col: col.replace('"', '')}, inplace=True)
 
     dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].replace('\.','', regex=True)
     dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].replace(',','.', regex=True)
