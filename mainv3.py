@@ -79,7 +79,7 @@ def tratamento():
 
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
 
-    dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'])
+    dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'], format='%d/%m/%Y')
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].dt.strftime('%d/%m/%Y')
 
