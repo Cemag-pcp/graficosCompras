@@ -74,7 +74,14 @@ def load_sheets():
 @st.cache_data()
 def tratamento():
 
+    hoje = datetime.now()
+    data_string = hoje.strftime('%Y-%m-%d')
+
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
+
+    dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'])
+    dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
+    dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].dt.strftime('%d/%m/%Y')
 
     dfDatasDiasUteis = dfDatas[dfDatas['natureza_tb1'] == 'saida'][['datas_tb1']]
     dfSimulacao = dfSimulacao[dfSimulacao['Média 3M'] != ''].iloc[:dfSimulacao.shape[0]-1]
@@ -111,9 +118,6 @@ def tratamento():
     dfPedidos = dfPedidos.iloc[:,1:5]
     dfPedidos['datas_tb1'] = pd.to_datetime(dfPedidos['datas_tb1'], format='%d/%m/%Y' )
     dfPedidos = dfPedidos[['datas_tb1', 'produto', 'natureza', 'Qde Ped']]
-
-    hoje = datetime.now()
-    data_string = hoje.strftime('%Y-%m-%d')
 
     #tabelaGeralDataProduto = tabelaGeralDataProduto.append(dfPedidos).sort_values(by='datas_tb1')
     tabelaGeralDataProduto = pd.concat([tabelaGeralDataProduto, dfPedidos]).sort_values(by='datas_tb1')
@@ -258,7 +262,11 @@ def tratamento():
 
                 dados['valorCorrigido'][0] = saldoInicial 
 
-                for j in range(1,len(dados)-1):
+                tamanho = len(dados)
+
+                j=1
+
+                while j <= tamanho-1:
                     
                     if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
                         
@@ -279,25 +287,22 @@ def tratamento():
 
                         j = j + 1
 
+                        tamanho = len(dados)
+
                     else:
                         
-                        # if dados['datas_tb1'][j] in dezDiasUteis:
-                        #     dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - mediaDezDias
-                        # else:
-                        #      dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
-
                         if dados['datas_tb1'][j] in dezDiasUteis and mediaDezDias > consumoDiario:
                             
                             dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - mediaDezDias
 
                         else:
-                             
-                             dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
-
-                        dimensao = dados.shape[0]
+                            
+                            dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
 
                         j = j + 1
-            
+
+                        tamanho = len(dados)
+      
             else:
                 
                 maximo = 10000
@@ -310,14 +315,12 @@ def tratamento():
 
                 consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
 
-                
-
                 dados = dados.reset_index(drop=True) 
 
                 dados['valorCorrigido'][0] = saldoInicial
 
                 j = 1
-                dimensao = dados.shape[0]-1
+                dimensao = dados.shape[0]
 
                 while j <= dimensao-1:
                     
@@ -349,13 +352,13 @@ def tratamento():
                             dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - mediaDezDias
 
                         else:
-                             
-                             dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
+                            
+                            dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
                         
                         dimensao = dados.shape[0]
 
                         j = j + 1
-
+                
             #tbCorrigida = tbCorrigida.append(dados)
             tbCorrigida = pd.concat([tbCorrigida, dados])
 
@@ -363,6 +366,10 @@ def tratamento():
             continue
     
     dfProdutos['mediaDezDias'] = dfProdutos['mediaDezDias'].astype(float) / 10
+
+    dataMax = tbCorrigida[tbCorrigida['datas_tb1'] != '']
+
+    tabelaFinal = tabelaFinal[tabelaFinal['datas_tb1'] < max(tbCorrigida['datas_tb1'])]
 
     return tbCorrigida, tabelaFinal, dfProdutos
 
@@ -373,19 +380,32 @@ def tratamento():
 dfGrupo = pd.read_csv('grupo.csv', sep=';') 
 
 tbGrupo = dfGrupo[['grupo']]
-tbProduto = dfGrupo[['produto']]
+# tbProduto = dfGrupo[['produto']]
 
 grupoUnico = tbGrupo['grupo'].unique()
-produtoUnico = tbProduto['produto'].unique()
+
+# produtoUnico = tbProduto['produto'].unique()
+
+tbCorrigida, tabelaFinal, dfProdutos = tratamento()
+
+tbCorrigida.dropna(inplace=True)
+tabelaFinal.dropna(inplace=True)
+dfProdutos.dropna(inplace=True)
+
+listaProdutos = tbCorrigida['produto'].unique().tolist()
+
+listaProdutos.insert(0, 'Selecione')
 
 listaGrupos = ['Selecione']
-listaProdutos = ['Selecione']
+# listaProdutos = ['Selecione']
 
 for i in range(len(grupoUnico)):
     listaGrupos.append(grupoUnico[i])
 
-for i in range(len(produtoUnico)):
-    listaProdutos.append(produtoUnico[i])
+listaGrupos = [valor for valor in listaGrupos if valor and not isinstance(valor, float) and valor.strip()]
+
+# for i in range(len(produtoUnico)):
+#     listaProdutos.append(produtoUnico[i])
 
 with st.sidebar:
     selectGrupo = st.selectbox("Selecione o grupo: ", listaGrupos)
@@ -393,12 +413,12 @@ with st.sidebar:
 
 if selectGrupo != 'Selecione':
 
-    # produto1='326409 - VERNIZ SINTÉTICO - TINGIDO'
+    # produto1='268150 - PNEU 7.50-16 IMPL (16TT 10PR RA45)'
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
 
     # tbCorrigida[tbCorrigida['produto'] == produto1]
-    # tabelaFinal[tabelaFinal['produto'] == produto1]
+    # tFinal = tabelaFinal[tabelaFinal['produto'] == produto1]
 
     tbCorrigida.dropna(inplace=True)
     tabelaFinal.dropna(inplace=True)
@@ -406,6 +426,8 @@ if selectGrupo != 'Selecione':
 
     tbCorrigida = tbCorrigida[tbCorrigida['grupo'] == selectGrupo]
     tabelaFinal = tabelaFinal[tabelaFinal['grupo'] == selectGrupo]
+
+    tabelaFinal = tabelaFinal.sort_values(['datas_tb1', 'natureza'], ascending=[True, False]).reset_index(drop=True)
     
     tabelaFinal['valor_0'] = 0
     
@@ -425,13 +447,11 @@ if selectGrupo != 'Selecione':
         fig.add_trace(go.Scatter(x=df_grafico1['datas_tb1'], y=df_grafico1['valorCorrigido'], mode='lines', name='Consumo corrigido'))
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['estoqueMinimo'], mode='lines', name='Estoque mínimo'))
 
-        fig.update_xaxes(
-        tickmode='array',
-        tickvals=df_grafico['datas_tb1'],
-        ticktext=df_grafico['datas_tb1'].dt.strftime('%d/%m/%Y'),
-        ) # Formatar as datas como 'dd/mm/aaaa')
+        inicio = min(df_grafico['datas_tb1'])  # Defina a data de início com base nos rótulos originais
+        fim = max(df_grafico['datas_tb1'])  # Defina a data de fim com base nos rótulos originais
+        novos_rotulos = pd.date_range(start=inicio, end=fim, freq='5D')
 
-        fig.update_layout(title={'text': titulo, 'x': 0.2}, xaxis_title='Data', xaxis_tickangle=90, yaxis_title='Valor', width=800, height=600, xaxis_tickformat = '%d %B (%a)<br>%Y')
+        fig.update_layout(title={'text': titulo, 'x': 0.2}, xaxis_title='Data', xaxis_tickangle=45, yaxis_title='Valor', width=800, height=600, xaxis=dict(tickmode='array', tickvals=novos_rotulos, tickformat='%Y-%m-%d'))
 
         st.plotly_chart(fig)
 
@@ -440,13 +460,15 @@ if selectGrupo != 'Selecione':
 if selectProduto != 'Selecione':
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
-    
+
     tbCorrigida.dropna(inplace=True)
     tabelaFinal.dropna(inplace=True)
     dfProdutos.dropna(inplace=True)
 
     tbCorrigida = tbCorrigida[tbCorrigida['produto'] == selectProduto]
     tabelaFinal = tabelaFinal[tabelaFinal['produto'] == selectProduto]
+
+    tabelaFinal = tabelaFinal.sort_values(['datas_tb1', 'natureza'], ascending=[True, False]).reset_index(drop=True)
 
     tabelaFinal['valor_0'] = 0
 
@@ -466,7 +488,11 @@ if selectProduto != 'Selecione':
         fig.add_trace(go.Scatter(x=df_grafico1['datas_tb1'], y=df_grafico1['valorCorrigido'], mode='lines', name='Consumo corrigido'))
         fig.add_trace(go.Scatter(x=df_grafico['datas_tb1'], y=df_grafico['estoqueMinimo'], mode='lines', name='Estoque mínimo'))
 
-        fig.update_layout(title=titulo, xaxis_title='Data', yaxis_title='Valor')
+        inicio = min(df_grafico['datas_tb1'])  # Defina a data de início com base nos rótulos originais
+        fim = max(df_grafico['datas_tb1'])  # Defina a data de fim com base nos rótulos originais
+        novos_rotulos = pd.date_range(start=inicio, end=fim, freq='5D')
+
+        fig.update_layout(title={'text': titulo, 'x': 0.2}, xaxis_title='Data', xaxis_tickangle=45, yaxis_title='Valor', width=800, height=600, xaxis=dict(tickmode='array', tickvals=novos_rotulos, tickformat='%Y-%m-%d'))
 
         st.plotly_chart(fig)
 
