@@ -69,6 +69,27 @@ def load_sheets():
     dfPedidos = dfPedidos.set_axis(cabecalho, axis=1)
     dfPedidos = dfPedidos.iloc[1:]
 
+    ## Conectando com google sheets e acessando Análise Previsão de Consumo (CMM / NTP ) DEE
+
+    # sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
+    # worksheet = 'Dados Simulação'
+
+    # sa = gspread.service_account(filename)
+    # sh2 = sa.open(sheet)
+    # wks2 = sh2.worksheet(worksheet)
+    # planSimulacao = wks2.get()
+    # planSimulacao = pd.DataFrame(planSimulacao)
+
+    # planSimulacao.dropna(axis=1, inplace=True)
+
+    # cabecalho = wks2.row_values(1)
+
+    # #tratando planilha Análise Previsão de Consumo (CMM / NTP ) DEE
+    # planSimulacao = planSimulacao.set_axis(cabecalho[0:23], axis=1)
+    # planSimulacao = planSimulacao.iloc[1:]
+
+    # planSimulacao['Código'] = planSimulacao['Código'] + " - " + planSimulacao['Descrição']
+
     return dfSimulacao, dfDatas, dfPedidos
 
 @st.cache_data()
@@ -179,8 +200,11 @@ def tratamento():
             
                 if tabelaFiltrada['datas_tb1'][j] in dezDiasUteis:
                     
-                    consumoSimuladoDezDias = float(dfDezDias[dfDezDias['produto'] == tabelaFiltrada['produto'][j]]['Quantidade#Saída'].reset_index(drop=True)[0]) / 10
-                    
+                    try:
+                        consumoSimuladoDezDias = float(dfDezDias[dfDezDias['produto'] == tabelaFiltrada['produto'][j]]['Quantidade#Saída'].reset_index(drop=True)[0]) / 10
+                    except:
+                        consumoSimuladoDezDias = 0
+
                     consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
 
                     if consumoSimuladoDezDias > consumoDiario:
@@ -214,10 +238,12 @@ def tratamento():
         
     tabelaFinal.reset_index(drop=True, inplace=True)
 
-    dfProdutos = dfProdutos.merge(dfDezDias, on='produto')
+    dfProdutos = dfProdutos.merge(dfDezDias, on='produto', how='left')
+
+    dfProdutos.fillna(0, inplace=True)
 
     tabelaFinal = tabelaFinal.merge(dfProdutos, on='produto')
-    
+
     tabelaFinal.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
     dfProdutos.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
     
@@ -268,7 +294,7 @@ def tratamento():
 
                 while j <= tamanho-1:
                     
-                    if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
+                    if dados['valorCorrigido'][j-1] <= float(estoqueMinimo) and float(estoqueMinimo) > 0:
                         
                         data = dados['datas_tb1'][j-1]
                         produto = dados['produto'][j-1]
@@ -367,8 +393,6 @@ def tratamento():
     
     dfProdutos['mediaDezDias'] = dfProdutos['mediaDezDias'].astype(float) / 10
 
-    dataMax = tbCorrigida[tbCorrigida['datas_tb1'] != '']
-
     tabelaFinal = tabelaFinal[tabelaFinal['datas_tb1'] < max(tbCorrigida['datas_tb1'])]
 
     return tbCorrigida, tabelaFinal, dfProdutos
@@ -413,12 +437,13 @@ with st.sidebar:
 
 if selectGrupo != 'Selecione':
 
-    # produto1='268150 - PNEU 7.50-16 IMPL (16TT 10PR RA45)'
+    # produto1='240471 - CILINDRO TELESCÓPICO CBH 6T 10 OC NV'
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
 
+    # dfProdutos[dfProdutos['produto'] == produto1]
     # tbCorrigida[tbCorrigida['produto'] == produto1]
-    # tFinal = tabelaFinal[tabelaFinal['produto'] == produto1]
+    # tabelaFinal[tabelaFinal['produto'] == produto1]
 
     tbCorrigida.dropna(inplace=True)
     tabelaFinal.dropna(inplace=True)
