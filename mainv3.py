@@ -246,7 +246,7 @@ def tratamento():
     corrigido = tabelaFinal.merge(corrigido)
     corrigido = corrigido[corrigido['natureza'] == 'saida'][['datas_tb1','produto', 'grupo']]
 
-    compraMaxima = dfProdutos[['produto','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario']]
+    compraMaxima = dfProdutos[['produto','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario', 'maior_valor']]
  
     corrigido['valorCorrigido'] = 0
 
@@ -261,104 +261,104 @@ def tratamento():
 
         if len(dados) != 0:
 
-            if dados['grupo'][0] != 'Chapas':
+            # if dados['grupo'][0] != 'Chapas':
 
-                maximo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
+            maximo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['maior_valor']].values.tolist()[0][0]
 
-                saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
+            saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
 
-                estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
+            estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
 
-                # mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
+            # mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
 
-                consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
+            consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
 
-                dados['valorCorrigido'][0] = saldoInicial 
+            dados['valorCorrigido'][0] = saldoInicial 
 
-                tamanho = len(dados)
+            tamanho = len(dados)
 
-                j=1
+            j=1
 
-                while j <= tamanho-1:
-                    
-                    if dados['valorCorrigido'][j-1] <= float(estoqueMinimo) and float(estoqueMinimo) > 0:
-                        
-                        data = dados['datas_tb1'][j-1]
-                        produto = dados['produto'][j-1]
-                        grupo = dados['grupo'][j-1]
-                        valorCorrigido = maximo + dados['valorCorrigido'][j-1]
-                        
-                        df_inserir = pd.DataFrame({'datas_tb1':[data],
-                                                    'produto':[produto],
-                                                        'grupo':[grupo],
-                                                        'valorCorrigido':[valorCorrigido]
-                                                        }, index=[j-1 + 0.5])
-                        
-                        dados.index = dados.index.astype('float64')
-
-                        dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
-
-                        j = j + 1
-
-                        tamanho = len(dados)
-
-                    else:
-                            
-                        dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
-
-                        j = j + 1
-
-                        tamanho = len(dados)
-      
-            else:
+            while j <= tamanho-1:
                 
-                maximo = 10000
-
-                saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
-
-                estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
-
-                # mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
-
-                consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
-
-                dados = dados.reset_index(drop=True) 
-
-                dados['valorCorrigido'][0] = saldoInicial
-
-                j = 1
-                dimensao = dados.shape[0]
-
-                while j <= dimensao-1:
+                if dados['valorCorrigido'][j-1] <= float(estoqueMinimo) and float(estoqueMinimo) > 0:
                     
-                    if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
-                        
-                        data = dados['datas_tb1'][j-1]
-                        produto = dados['produto'][j-1]
-                        grupo = dados['grupo'][j-1]
-                        valorCorrigido = maximo + dados['valorCorrigido'][j-1]
-                        
-                        df_inserir = pd.DataFrame({'datas_tb1':[data],
-                                                    'produto':[produto],
-                                                        'grupo':[grupo],
-                                                        'valorCorrigido':[valorCorrigido]
-                                                        }, index=[j-1 + 0.5])
-                        
-                        dados.index = dados.index.astype('float64')
+                    data = dados['datas_tb1'][j-1]
+                    produto = dados['produto'][j-1]
+                    grupo = dados['grupo'][j-1]
+                    valorCorrigido = maximo + dados['valorCorrigido'][j-1]
+                    
+                    df_inserir = pd.DataFrame({'datas_tb1':[data],
+                                                'produto':[produto],
+                                                    'grupo':[grupo],
+                                                    'valorCorrigido':[valorCorrigido]
+                                                    }, index=[j-1 + 0.5])
+                    
+                    dados.index = dados.index.astype('float64')
 
-                        dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
+                    dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
+
+                    j = j + 1
+
+                    tamanho = len(dados)
+
+                else:
                         
-                        dimensao = dados.shape[0]
+                    dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
 
-                        j = j + 1
+                    j = j + 1
 
-                    else:
+                    tamanho = len(dados)
+      
+            # else:
+                
+            #     maximo = 10000
+
+            #     saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
+
+            #     estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
+
+            #     # mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
+
+            #     consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
+
+            #     dados = dados.reset_index(drop=True) 
+
+            #     dados['valorCorrigido'][0] = saldoInicial
+
+            #     j = 1
+            #     dimensao = dados.shape[0]
+
+            #     while j <= dimensao-1:
+                    
+            #         if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
+                        
+            #             data = dados['datas_tb1'][j-1]
+            #             produto = dados['produto'][j-1]
+            #             grupo = dados['grupo'][j-1]
+            #             valorCorrigido = maximo + dados['valorCorrigido'][j-1]
+                        
+            #             df_inserir = pd.DataFrame({'datas_tb1':[data],
+            #                                         'produto':[produto],
+            #                                             'grupo':[grupo],
+            #                                             'valorCorrigido':[valorCorrigido]
+            #                                             }, index=[j-1 + 0.5])
+                        
+            #             dados.index = dados.index.astype('float64')
+
+            #             dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
+                        
+            #             dimensao = dados.shape[0]
+
+            #             j = j + 1
+
+            #         else:
                             
-                        dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
+            #             dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
                         
-                        dimensao = dados.shape[0]
+            #             dimensao = dados.shape[0]
 
-                        j = j + 1
+            #             j = j + 1
                 
             #tbCorrigida = tbCorrigida.append(dados)
             tbCorrigida = pd.concat([tbCorrigida, dados])
