@@ -12,7 +12,7 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
-@st.cache_data(allow_output_mutation=True)
+@st.cache_data()
 def load_sheets():
 
     filename = 'service_account.json'
@@ -92,7 +92,7 @@ def load_sheets():
 
     return dfSimulacao, dfDatas, dfPedidos
 
-@st.cache_data(allow_output_mutation=True)
+@st.cache_data()
 def tratamento():
 
     hoje = datetime.now()
