@@ -400,8 +400,6 @@ tbCorrigida.dropna(inplace=True)
 tabelaFinal.dropna(inplace=True)
 dfProdutos.dropna(inplace=True)
 
-dfProdutos[dfProdutos['produto'] == '262728']
-
 listaProdutos = tbCorrigida['produto'].unique().tolist()
 
 listaProdutos.insert(0, 'Selecione')
