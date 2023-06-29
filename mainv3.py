@@ -100,6 +100,7 @@ def tratamento():
 
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
 
+    dfPedidos = dfPedidos[dfPedidos['Data Entrega'] != '']
     dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'], format='%d/%m/%Y')
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].dt.strftime('%d/%m/%Y')
@@ -138,6 +139,8 @@ def tratamento():
 
     dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto')
 
+    # dfProdutos[dfProdutos['produto'].str.contains('262728')]
+
     dfPedidos = dfPedidos.rename(columns={'Recurso':'produto', 'Data Entrega':'datas_tb1'})
     dfPedidos['natureza'] = 'entrada'
     dfPedidos = dfPedidos[['produto', 'datas_tb1','natureza', 'Qde Ped']]
@@ -156,7 +159,7 @@ def tratamento():
     qtdProdutosUnico = len(tabelaGeralDataProduto['produto'].unique())
     
     tabelaFinal = pd.DataFrame()
-
+   
     # média dos primeiros dez dias úteis
 
     # dfDezDias = tabelaFinal[tabelaFinal['datas_tb1'].isin(dezDiasUteis)]    
@@ -177,6 +180,12 @@ def tratamento():
     # # dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].astype(float) * -1
 
     # dfDezDias = dfDezDias.rename(columns={'Recurso':'produto'})
+
+    # Convertendo o array para uma Series do Pandas
+    # series = pd.Series(produtosUnicos)
+
+    # # Aplicando a pesquisa usando str.contains()
+    # series[series.str.contains('262728')]
 
     for i in range(qtdProdutosUnico):
         
@@ -390,6 +399,8 @@ tbCorrigida, tabelaFinal, dfProdutos = tratamento()
 tbCorrigida.dropna(inplace=True)
 tabelaFinal.dropna(inplace=True)
 dfProdutos.dropna(inplace=True)
+
+dfProdutos[dfProdutos['produto'] == '262728']
 
 listaProdutos = tbCorrigida['produto'].unique().tolist()
 
