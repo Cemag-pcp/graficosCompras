@@ -60,10 +60,11 @@ def load_sheets():
     wks2 = sh2.worksheet(worksheet)
     dfPedidos = wks2.get()
     dfPedidos = pd.DataFrame(dfPedidos)
-
+    dfPedidos = dfPedidos.iloc[:,:28]
     dfPedidos.dropna(axis=1, inplace=True)
 
     cabecalho = wks2.row_values(1)
+    cabecalho = cabecalho[:28]
     #tratando planilha Análise Previsão de Consumo (CMM / NTP ) DEE
     dfPedidos = dfPedidos.set_axis(cabecalho, axis=1)
     dfPedidos = dfPedidos.iloc[1:]
