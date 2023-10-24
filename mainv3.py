@@ -137,9 +137,9 @@ def tratamento():
 
     tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=';')
 
-    dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto')
+    dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto', how='left')
 
-    # dfProdutos[dfProdutos['produto'].str.contains('262728')]
+    # dfProdutos[dfProdutos['produto'].str.contains('116626')]
 
     dfPedidos = dfPedidos.rename(columns={'Recurso':'produto', 'Data Entrega':'datas_tb1'})
     dfPedidos['natureza'] = 'entrada'
@@ -149,6 +149,7 @@ def tratamento():
     dfPedidos = dfPedidos[['datas_tb1', 'produto', 'natureza', 'Qde Ped']]
 
     #tabelaGeralDataProduto = tabelaGeralDataProduto.append(dfPedidos).sort_values(by='datas_tb1')
+
     tabelaGeralDataProduto = pd.concat([tabelaGeralDataProduto, dfPedidos]).sort_values(by='datas_tb1')
     tabelaGeralDataProduto = tabelaGeralDataProduto[tabelaGeralDataProduto['datas_tb1'] >= data_string].reset_index(drop=True)
     tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].astype(str)
@@ -192,6 +193,8 @@ def tratamento():
         try:
 
             produtosUnicos = tabelaGeralDataProduto['produto'].unique()
+
+            # tabelaGeralDataProduto[tabelaGeralDataProduto['produto'].str.contains("COMP")].unique()
 
             produto = produtosUnicos[i]
             tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == produto].reset_index(drop=True)
@@ -475,6 +478,8 @@ if selectProduto != 'Selecione':
     tbCorrigida.dropna(inplace=True)
     tabelaFinal.dropna(inplace=True)
     dfProdutos.dropna(inplace=True)
+
+    tbCorrigida['produto'].unique()
 
     tbCorrigida = tbCorrigida[tbCorrigida['produto'] == selectProduto]
     tabelaFinal = tabelaFinal[tabelaFinal['produto'] == selectProduto]
