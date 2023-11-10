@@ -421,6 +421,13 @@ listaGrupos = [valor for valor in listaGrupos if valor and not isinstance(valor,
 with st.sidebar:
     selectGrupo = st.selectbox("Selecione o grupo: ", listaGrupos)
     selectProduto = st.selectbox("Selecione o produto: ", listaProdutos)
+   
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
+    if st.button("Atualizar dados"):
+        tratamento.clear()
+        load_sheets.clear()
 
 if selectGrupo != 'Selecione':
 
