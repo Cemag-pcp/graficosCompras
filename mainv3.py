@@ -60,11 +60,12 @@ def load_sheets():
     wks2 = sh2.worksheet(worksheet)
     dfPedidos = wks2.get()
     dfPedidos = pd.DataFrame(dfPedidos)
-    dfPedidos = dfPedidos.iloc[:,:28]
+
     dfPedidos.dropna(axis=1, inplace=True)
 
     cabecalho = wks2.row_values(1)
-    cabecalho = cabecalho[:28]
+    cabecalho = cabecalho[:37]
+
     #tratando planilha Análise Previsão de Consumo (CMM / NTP ) DEE
     dfPedidos = dfPedidos.set_axis(cabecalho, axis=1)
     dfPedidos = dfPedidos.iloc[1:]
@@ -100,7 +101,6 @@ def tratamento():
 
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
 
-    dfPedidos = dfPedidos[dfPedidos['Data Entrega'] != '']
     dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'], format='%d/%m/%Y')
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].dt.strftime('%d/%m/%Y')
@@ -117,29 +117,22 @@ def tratamento():
     tabelaGeralDataProduto = tabelaGeralDataProduto.sort_values(by='datas_tb1')
     tabelaGeralDataProduto['natureza'] = 'saida'
 
-    # dezDiasUteis = tabelaGeralDataProduto['datas_tb1'].drop_duplicates().reset_index(drop=True)
-    # dezDiasUteis = dezDiasUteis.loc[0:9].tolist()
+    dezDiasUteis = tabelaGeralDataProduto['datas_tb1'].drop_duplicates().reset_index(drop=True)
+    dezDiasUteis = dezDiasUteis.loc[0:9].tolist()
 
-    dfSimulacao = dfSimulacao.rename(columns={'Prev Con Mov Est(CMM)':'Prev', 'SIMULAÇÃO / (F.Pend/Fat.MM)':'Simulacao'})
-
-    dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev', 'Simulacao']]
+    dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev Con Mov Est(CMM)']]
 
     dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['Estoque Total'] = dfProdutos['Estoque Total'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
-    dfProdutos['Prev'] = dfProdutos['Prev'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
-    dfProdutos['Simulacao'] = dfProdutos['Simulacao'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
+    dfProdutos['Prev Con Mov Est(CMM)'] = dfProdutos['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
 
-    dfProdutos['maior_valor'] = dfProdutos[['Prev', 'Simulacao']].apply(max, axis=1)
-
-    dfProdutos['consumoDiario'] = dfProdutos['maior_valor'] * 3 / 60
+    dfProdutos['consumoDiario'] = dfProdutos['Média 3M'] * 3 / 60
     dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 10
-
+ 
     tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=';')
 
-    dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto', how='left')
-
-    # dfProdutos[dfProdutos['produto'].str.contains('116626')]
+    dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto')
 
     dfPedidos = dfPedidos.rename(columns={'Recurso':'produto', 'Data Entrega':'datas_tb1'})
     dfPedidos['natureza'] = 'entrada'
@@ -149,7 +142,6 @@ def tratamento():
     dfPedidos = dfPedidos[['datas_tb1', 'produto', 'natureza', 'Qde Ped']]
 
     #tabelaGeralDataProduto = tabelaGeralDataProduto.append(dfPedidos).sort_values(by='datas_tb1')
-
     tabelaGeralDataProduto = pd.concat([tabelaGeralDataProduto, dfPedidos]).sort_values(by='datas_tb1')
     tabelaGeralDataProduto = tabelaGeralDataProduto[tabelaGeralDataProduto['datas_tb1'] >= data_string].reset_index(drop=True)
     tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].astype(str)
@@ -160,7 +152,7 @@ def tratamento():
     qtdProdutosUnico = len(tabelaGeralDataProduto['produto'].unique())
     
     tabelaFinal = pd.DataFrame()
-   
+
     # média dos primeiros dez dias úteis
 
     # dfDezDias = tabelaFinal[tabelaFinal['datas_tb1'].isin(dezDiasUteis)]    
@@ -169,32 +161,24 @@ def tratamento():
     # tabelaFinal.loc[tabelaFinal["datas_tb1"].isin(dezDiasUteis), "consumoDiario"] = dfDezDias["consumoDiario"]
 
     # dfDezDias = pd.read_csv("dezdias.csv", sep=';', encoding='iso-8859-1')
-    # dfDezDias = pd.read_csv("dezdiassimulado.csv", sep=';', encoding='iso-8859-1')
-    # colunas = ['Recurso','Quantidade#Saída']
-    # dfDezDias = dfDezDias.set_axis(colunas,axis=1,copy=False)
+    dfDezDias = pd.read_csv("dezdiassimulado.csv", sep=';', encoding='iso-8859-1')
+    colunas = ['Recurso','Quantidade#Saída']
+    dfDezDias = dfDezDias.set_axis(colunas,axis=1,copy=False)
 
-    # dfDezDias = dfDezDias.replace('"',"", regex=True)
-    # dfDezDias = dfDezDias.replace('=',"", regex=True)
+    dfDezDias = dfDezDias.replace('"',"", regex=True)
+    dfDezDias = dfDezDias.replace('=',"", regex=True)
 
-    # dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].replace('\.','', regex=True)
-    # dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].replace(',','.', regex=True)
-    # # dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].astype(float) * -1
+    dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].replace('\.','', regex=True)
+    dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].replace(',','.', regex=True)
+    # dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].astype(float) * -1
 
-    # dfDezDias = dfDezDias.rename(columns={'Recurso':'produto'})
-
-    # Convertendo o array para uma Series do Pandas
-    # series = pd.Series(produtosUnicos)
-
-    # # Aplicando a pesquisa usando str.contains()
-    # series[series.str.contains('262728')]
+    dfDezDias = dfDezDias.rename(columns={'Recurso':'produto'})
 
     for i in range(qtdProdutosUnico):
         
         try:
 
             produtosUnicos = tabelaGeralDataProduto['produto'].unique()
-
-            # tabelaGeralDataProduto[tabelaGeralDataProduto['produto'].str.contains("COMP")].unique()
 
             produto = produtosUnicos[i]
             tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == produto].reset_index(drop=True)
@@ -215,7 +199,25 @@ def tratamento():
 
             for j in range(1, len(tabelaFiltrada)):
             
-                consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
+                if tabelaFiltrada['datas_tb1'][j] in dezDiasUteis:
+                    
+                    try:
+                        consumoSimuladoDezDias = float(dfDezDias[dfDezDias['produto'] == tabelaFiltrada['produto'][j]]['Quantidade#Saída'].reset_index(drop=True)[0]) / 10
+                    except:
+                        consumoSimuladoDezDias = 0
+
+                    consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
+
+                    if consumoSimuladoDezDias > consumoDiario:
+
+                        consumoDiario = consumoSimuladoDezDias
+                    
+                    else:
+
+                        consumoDiario = consumoDiario
+                else:
+
+                    consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
                 
                 # consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
 
@@ -237,28 +239,28 @@ def tratamento():
         
     tabelaFinal.reset_index(drop=True, inplace=True)
 
-    # dfProdutos = dfProdutos.merge(dfDezDias, on='produto', how='left')
+    dfProdutos = dfProdutos.merge(dfDezDias, on='produto', how='left')
 
     dfProdutos.fillna(0, inplace=True)
 
     tabelaFinal = tabelaFinal.merge(dfProdutos, on='produto')
 
-    # tabelaFinal.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
-    # dfProdutos.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
+    tabelaFinal.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
+    dfProdutos.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
     
-    # for i in range(len(tabelaFinal)):
-    #     if tabelaFinal['datas_tb1'][i] in dezDiasUteis:
-    #         tabelaFinal['consumoDiario'][i] = float(dfProdutos[dfProdutos['produto'] == tabelaFinal['produto'][i]]['mediaDezDias'].reset_index(drop=True)) / 10
-    #     else:
-    #         continue
+    for i in range(len(tabelaFinal)):
+        if tabelaFinal['datas_tb1'][i] in dezDiasUteis:
+            tabelaFinal['consumoDiario'][i] = float(dfProdutos[dfProdutos['produto'] == tabelaFinal['produto'][i]]['mediaDezDias'].reset_index(drop=True)) / 10
+        else:
+            continue
 
     #tabelaFinal['estoqueMinimo'] = tabelaFinal['consumoDiario'] * 10
     
     corrigido = tabelaFinal.copy()
-    corrigido = tabelaFinal.merge(corrigido)
+    #corrigido = tabelaFinal.merge(corrigido)
     corrigido = corrigido[corrigido['natureza'] == 'saida'][['datas_tb1','produto', 'grupo']]
 
-    compraMaxima = dfProdutos[['produto','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario', 'maior_valor']]
+    compraMaxima = dfProdutos[['produto','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario','mediaDezDias']]
  
     corrigido['valorCorrigido'] = 0
 
@@ -273,104 +275,116 @@ def tratamento():
 
         if len(dados) != 0:
 
-            # if dados['grupo'][0] != 'Chapas':
+            if dados['grupo'][0] != 'Chapas':
 
-            maximo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['maior_valor']].values.tolist()[0][0]
+                maximo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Média 3M']].values.tolist()[0][0]
 
-            saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
+                saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
 
-            estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
+                estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
 
-            # mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
+                mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
 
-            consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
+                consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
 
-            dados['valorCorrigido'][0] = saldoInicial 
+                dados['valorCorrigido'][0] = saldoInicial 
 
-            tamanho = len(dados)
+                tamanho = len(dados)
 
-            j=1
+                j=1
 
-            while j <= tamanho-1:
-                
-                if dados['valorCorrigido'][j-1] <= float(estoqueMinimo) and float(estoqueMinimo) > 0:
+                while j <= tamanho-1:
                     
-                    data = dados['datas_tb1'][j-1]
-                    produto = dados['produto'][j-1]
-                    grupo = dados['grupo'][j-1]
-                    valorCorrigido = maximo + dados['valorCorrigido'][j-1]
-                    
-                    df_inserir = pd.DataFrame({'datas_tb1':[data],
-                                                'produto':[produto],
-                                                    'grupo':[grupo],
-                                                    'valorCorrigido':[valorCorrigido]
-                                                    }, index=[j-1 + 0.5])
-                    
-                    dados.index = dados.index.astype('float64')
-
-                    dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
-
-                    j = j + 1
-
-                    tamanho = len(dados)
-
-                else:
+                    if dados['valorCorrigido'][j-1] <= float(estoqueMinimo) and float(estoqueMinimo) > 0:
                         
-                    dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
-
-                    j = j + 1
-
-                    tamanho = len(dados)
-      
-            # else:
-                
-            #     maximo = 10000
-
-            #     saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
-
-            #     estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
-
-            #     # mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
-
-            #     consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
-
-            #     dados = dados.reset_index(drop=True) 
-
-            #     dados['valorCorrigido'][0] = saldoInicial
-
-            #     j = 1
-            #     dimensao = dados.shape[0]
-
-            #     while j <= dimensao-1:
-                    
-            #         if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
+                        data = dados['datas_tb1'][j-1]
+                        produto = dados['produto'][j-1]
+                        grupo = dados['grupo'][j-1]
+                        valorCorrigido = maximo + dados['valorCorrigido'][j-1]
                         
-            #             data = dados['datas_tb1'][j-1]
-            #             produto = dados['produto'][j-1]
-            #             grupo = dados['grupo'][j-1]
-            #             valorCorrigido = maximo + dados['valorCorrigido'][j-1]
+                        df_inserir = pd.DataFrame({'datas_tb1':[data],
+                                                    'produto':[produto],
+                                                        'grupo':[grupo],
+                                                        'valorCorrigido':[valorCorrigido]
+                                                        }, index=[j-1 + 0.5])
                         
-            #             df_inserir = pd.DataFrame({'datas_tb1':[data],
-            #                                         'produto':[produto],
-            #                                             'grupo':[grupo],
-            #                                             'valorCorrigido':[valorCorrigido]
-            #                                             }, index=[j-1 + 0.5])
+                        dados.index = dados.index.astype('float64')
+
+                        dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
+
+                        j = j + 1
+
+                        tamanho = len(dados)
+
+                    else:
                         
-            #             dados.index = dados.index.astype('float64')
-
-            #             dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
-                        
-            #             dimensao = dados.shape[0]
-
-            #             j = j + 1
-
-            #         else:
+                        if dados['datas_tb1'][j] in dezDiasUteis and mediaDezDias > consumoDiario:
                             
-            #             dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
-                        
-            #             dimensao = dados.shape[0]
+                            dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - mediaDezDias
 
-            #             j = j + 1
+                        else:
+                            
+                            dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
+
+                        j = j + 1
+
+                        tamanho = len(dados)
+      
+            else:
+                
+                maximo = 10000
+
+                saldoInicial = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['Estoque Total']].values.tolist()[0][0]
+
+                estoqueMinimo = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['estoqueMinimo']].values.tolist()[0][0]
+
+                mediaDezDias = float(compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['mediaDezDias']].values.tolist()[0][0]) / 10
+
+                consumoDiario = compraMaxima[compraMaxima['produto'] == compraMaxima['produto'][i]].reset_index(drop=True)[['consumoDiario']].values.tolist()[0][0]
+
+                dados = dados.reset_index(drop=True) 
+
+                dados['valorCorrigido'][0] = saldoInicial
+
+                j = 1
+                dimensao = dados.shape[0]
+
+                while j <= dimensao-1:
+                    
+                    if dados['valorCorrigido'][j-1] <= float(estoqueMinimo):
+                        
+                        data = dados['datas_tb1'][j-1]
+                        produto = dados['produto'][j-1]
+                        grupo = dados['grupo'][j-1]
+                        valorCorrigido = maximo + dados['valorCorrigido'][j-1]
+                        
+                        df_inserir = pd.DataFrame({'datas_tb1':[data],
+                                                    'produto':[produto],
+                                                        'grupo':[grupo],
+                                                        'valorCorrigido':[valorCorrigido]
+                                                        }, index=[j-1 + 0.5])
+                        
+                        dados.index = dados.index.astype('float64')
+
+                        dados = pd.concat([dados.loc[:j-1], df_inserir, dados.loc[j:]]).reset_index(drop=True)
+                        
+                        dimensao = dados.shape[0]
+
+                        j = j + 1
+
+                    else:
+                        
+                        if dados['datas_tb1'][j] in dezDiasUteis and mediaDezDias > consumoDiario:
+                            
+                            dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - mediaDezDias
+
+                        else:
+                            
+                            dados['valorCorrigido'][j] = dados['valorCorrigido'][j-1] - consumoDiario
+                        
+                        dimensao = dados.shape[0]
+
+                        j = j + 1
                 
             #tbCorrigida = tbCorrigida.append(dados)
             tbCorrigida = pd.concat([tbCorrigida, dados])
@@ -378,7 +392,7 @@ def tratamento():
         else:
             continue
     
-    # dfProdutos['mediaDezDias'] = dfProdutos['mediaDezDias'].astype(float) / 10
+    dfProdutos['mediaDezDias'] = dfProdutos['mediaDezDias'].astype(float) / 10
 
     tabelaFinal = tabelaFinal[tabelaFinal['datas_tb1'] < max(tbCorrigida['datas_tb1'])]
 
@@ -421,13 +435,6 @@ listaGrupos = [valor for valor in listaGrupos if valor and not isinstance(valor,
 with st.sidebar:
     selectGrupo = st.selectbox("Selecione o grupo: ", listaGrupos)
     selectProduto = st.selectbox("Selecione o produto: ", listaProdutos)
-   
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<br><br>", unsafe_allow_html=True)
-
-    if st.button("Atualizar dados"):
-        tratamento.clear()
-        load_sheets.clear()
 
 if selectGrupo != 'Selecione':
 
@@ -456,8 +463,6 @@ if selectGrupo != 'Selecione':
         
         df_grafico = tabelaFinal[tabelaFinal['produto'] == produtosUnico[produto]]
         df_grafico1 = tbCorrigida[tbCorrigida['produto'] == produtosUnico[produto]]
-        
-        # df_grafico[df_grafico['datas_tb1'] == '2023-05-30'][['datas_tb1','produto','natureza','entradas']]
 
         titulo = 'Produto: ' + produtosUnico[produto]
 
@@ -485,8 +490,6 @@ if selectProduto != 'Selecione':
     tbCorrigida.dropna(inplace=True)
     tabelaFinal.dropna(inplace=True)
     dfProdutos.dropna(inplace=True)
-
-    tbCorrigida['produto'].unique()
 
     tbCorrigida = tbCorrigida[tbCorrigida['produto'] == selectProduto]
     tabelaFinal = tabelaFinal[tabelaFinal['produto'] == selectProduto]
