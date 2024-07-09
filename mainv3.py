@@ -9,20 +9,30 @@ import time
 import datetime
 from datetime import datetime
 import numpy as np
+from google.oauth2 import service_account
+
+# Connect to Google Sheets
+service_account_info = st.secrets["GOOGLE_SERVICE_ACCOUNT"]
+
+scope = ['https://www.googleapis.com/auth/spreadsheets',
+         "https://www.googleapis.com/auth/drive"]
 
 warnings.filterwarnings("ignore")
 
 @st.cache_data()
 def load_sheets():
 
-    filename = 'service_account.json'
+    # filename = 'service_account.json'
+
+    credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes=scope)
+    sa = gspread.authorize(credentials)
 
     ## Conectando com google sheets e acessando testesGraficos
 
     sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
     worksheet = 'testesGraficos'
 
-    sa = gspread.service_account(filename)
+    # sa = gspread.service_account(filename)
     sh = sa.open(sheet)
     wks = sh.worksheet(worksheet)
 
@@ -38,7 +48,7 @@ def load_sheets():
     sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
     worksheet = 'Simulação Pend. Vendas'
 
-    sa = gspread.service_account(filename)
+    # sa = gspread.service_account(filename)
     sh1 = sa.open(sheet)
     wks1 = sh1.worksheet(worksheet)
     dfSimulacao = wks1.get()
@@ -55,7 +65,7 @@ def load_sheets():
     sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
     worksheet = 'Dados Pedidos'
 
-    sa = gspread.service_account(filename)
+    # sa = gspread.service_account(filename)
     sh2 = sa.open(sheet)
     wks2 = sh2.worksheet(worksheet)
     dfPedidos = wks2.get()
