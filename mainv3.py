@@ -101,6 +101,70 @@ def load_sheets():
 
     # planSimulacao['Código'] = planSimulacao['Código'] + " - " + planSimulacao['Descrição']
 
+    grupo_df = pd.read_csv('agrupamento_chapas.csv', sep=';')
+
+    # Filtrar linhas do DataFrame original pelos códigos na tabela de grupo
+    duplicated_rows = dfSimulacao[dfSimulacao["Código"].isin(grupo_df["codigo"])].copy()
+
+    # Mesclar as linhas duplicadas com o DataFrame de grupos
+    duplicated_rows = duplicated_rows.merge(grupo_df, left_on="Código", right_on="codigo")
+
+    # Ajustar colunas para refletir os valores do grupo
+    duplicated_rows["Descrição"] = duplicated_rows["grupo"]
+    duplicated_rows["Código"] = duplicated_rows["grupo"]
+
+    # Concatenar as linhas duplicadas com o DataFrame original
+    final_df = pd.concat([dfSimulacao, duplicated_rows.drop(columns=["grupo", "codigo"])])
+
+    # Ordenar o DataFrame para manter a consistência
+    final_df = final_df.reset_index(drop=True)
+
+    final_df['Média 3M'] = final_df['Média 3M'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Cons Mes\nAnterior'] = final_df['Cons Mes\nAnterior'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Simulado \nPend Vendas'] = final_df['Simulado \nPend Vendas'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Est.Almox Central'] = final_df['Est.Almox Central'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Est. Produção'] = final_df['Est. Produção'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Estoque Total'] = final_df['Estoque Total'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Ped.Compras\n Pendente'] = final_df['Ped.Compras\n Pendente'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Prev Con Mov Est(CMM)'] = final_df['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'] = final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['DEE - Dias Em Est.'] = final_df['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Dias\nRessupr'] = final_df['Dias\nRessupr'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Dias de seguranca'] = final_df['Dias de seguranca'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+
+    final_df = final_df.groupby(["Descrição", "Código"]).sum(numeric_only=True).reset_index()
+
+    dfSimulacao = final_df
+
+    # --------------------------------------
+
+    renomear_col = list(dfPedidos.columns)
+    renomear_col[12] = 'Recurso_1'
+    
+    dfPedidos.columns = renomear_col 
+
+    # Separar o código do Recurso
+    dfPedidos["Código"] = dfPedidos["Recurso"].str.split(" - ").str[0]
+
+    # Filtrar linhas do DataFrame original pelos códigos na tabela de grupo
+    duplicated_rows = dfPedidos[dfPedidos["Código"].isin(grupo_df["codigo"])].copy()
+
+    # Mesclar as linhas duplicadas com o DataFrame de grupos
+    duplicated_rows = duplicated_rows.merge(grupo_df, left_on="Código", right_on="codigo")
+
+    # Ajustar colunas para refletir os valores do grupo
+    duplicated_rows["Recurso"] = duplicated_rows["grupo"]
+    duplicated_rows["Código"] = duplicated_rows["grupo"]
+
+    # Concatenar as linhas duplicadas com o DataFrame original
+    final_df = pd.concat([dfPedidos, duplicated_rows.drop(columns=["grupo", "codigo"])])
+
+    # Ordenar o DataFrame para manter a consistência
+    final_df = final_df.reset_index(drop=True)
+    final_df=final_df[final_df['Recurso']!='']
+    
+    dfPedidos = final_df
+
     return dfSimulacao, dfDatas, dfPedidos
 
 @st.cache_data()
@@ -116,10 +180,10 @@ def tratamento():
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].dt.strftime('%d/%m/%Y')
 
     dfDatasDiasUteis = dfDatas[dfDatas['natureza_tb1'] == 'saida'][['datas_tb1']]
-    dfSimulacao = dfSimulacao[dfSimulacao['Média 3M'] != ''].iloc[:dfSimulacao.shape[0]-1]
+    dfSimulacao = dfSimulacao[dfSimulacao['Média 3M'] != ''].reset_index(drop=True)
 
     dfSimulacao['produto'] = dfSimulacao['Código'] + ' - ' + dfSimulacao['Descrição']
-
+    
     qtdProdutosUnico = len(dfSimulacao['produto'].unique())
 
     tabelaGeralDataProduto = pd.merge(dfDatasDiasUteis.assign(key=1), dfSimulacao[['produto']].assign(key=1), on='key').drop('key', axis=1)
@@ -132,10 +196,10 @@ def tratamento():
 
     dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev Con Mov Est(CMM)']]
 
-    dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
-    dfProdutos['Estoque Total'] = dfProdutos['Estoque Total'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
-    dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
-    dfProdutos['Prev Con Mov Est(CMM)'] = dfProdutos['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
+    # dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
+    # dfProdutos['Estoque Total'] = dfProdutos['Estoque Total'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
+    # dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
+    # dfProdutos['Prev Con Mov Est(CMM)'] = dfProdutos['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
 
     dfProdutos['consumoDiario'] = dfProdutos['Média 3M'] * 3 / 60
     dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 10
@@ -147,16 +211,16 @@ def tratamento():
     dfPedidos = dfPedidos.rename(columns={'Recurso':'produto', 'Data Entrega':'datas_tb1'})
     dfPedidos['natureza'] = 'entrada'
     dfPedidos = dfPedidos[['produto', 'datas_tb1','natureza', 'Qde Ped']]
-    dfPedidos = dfPedidos.iloc[:,1:5]
+    dfPedidos = dfPedidos.iloc[:,0:4]
     dfPedidos['datas_tb1'] = pd.to_datetime(dfPedidos['datas_tb1'], format='%d/%m/%Y' )
     dfPedidos = dfPedidos[['datas_tb1', 'produto', 'natureza', 'Qde Ped']]
 
     #tabelaGeralDataProduto = tabelaGeralDataProduto.append(dfPedidos).sort_values(by='datas_tb1')
     tabelaGeralDataProduto = pd.concat([tabelaGeralDataProduto, dfPedidos]).sort_values(by='datas_tb1')
     tabelaGeralDataProduto = tabelaGeralDataProduto[tabelaGeralDataProduto['datas_tb1'] >= data_string].reset_index(drop=True)
-    tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].astype(str)
-    tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].replace("","0")
-    tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].apply(lambda x: float(x.replace(".","").replace(",",".")))
+    # tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].astype(str)
+    # tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].replace("","0")
+    # tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].apply(lambda x: float(x.replace(".","").replace(",",".")))
     tabelaGeralDataProduto = tabelaGeralDataProduto.replace(np.nan,0)
     tabelaGeralDataProduto = tabelaGeralDataProduto.rename(columns={'Qde Ped':'entradas'})
 
