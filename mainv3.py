@@ -133,7 +133,7 @@ def load_sheets():
     final_df['Dias de seguranca'] = final_df['Dias de seguranca'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
 
     final_df = final_df.groupby(["Descrição", "Código"]).sum(numeric_only=True).reset_index()
-
+    
     dfSimulacao = final_df
 
     # --------------------------------------
@@ -145,9 +145,11 @@ def load_sheets():
 
     # Separar o código do Recurso
     dfPedidos["Código"] = dfPedidos["Recurso"].str.split(" - ").str[0]
-
+    # dfPedidos[dfPedidos["Recurso"] == 'CHAPA LQ 6.00']
+    
     # Filtrar linhas do DataFrame original pelos códigos na tabela de grupo
     duplicated_rows = dfPedidos[dfPedidos["Código"].isin(grupo_df["codigo"])].copy()
+    # duplicated_rows['Código'] = duplicated_rows['Código'].apply(lambda x: f"{x} - {x}")
 
     # Mesclar as linhas duplicadas com o DataFrame de grupos
     duplicated_rows = duplicated_rows.merge(grupo_df, left_on="Código", right_on="codigo")
@@ -155,6 +157,7 @@ def load_sheets():
     # Ajustar colunas para refletir os valores do grupo
     duplicated_rows["Recurso"] = duplicated_rows["grupo"]
     duplicated_rows["Código"] = duplicated_rows["grupo"]
+    duplicated_rows['Recurso'] = duplicated_rows['Recurso'].apply(lambda x: f"{x} - {x}")
 
     # Concatenar as linhas duplicadas com o DataFrame original
     final_df = pd.concat([dfPedidos, duplicated_rows.drop(columns=["grupo", "codigo"])])
@@ -163,7 +166,12 @@ def load_sheets():
     final_df = final_df.reset_index(drop=True)
     final_df=final_df[final_df['Recurso']!='']
     
+    # final_df[final_df["Recurso"] == 'CHAPA LQ 6.00']
+
     dfPedidos = final_df
+
+    # dfSimulacao[dfSimulacao['Código'] == 'CHAPA LQ 6.00']
+    # dfPedidos[dfPedidos['Recurso'] == 'CHAPA LQ 6.00']
 
     return dfSimulacao, dfDatas, dfPedidos
 
@@ -174,6 +182,9 @@ def tratamento():
     data_string = hoje.strftime('%Y-%m-%d')
 
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
+
+    # dfSimulacao[dfSimulacao['Código'] == 'CHAPA LQ 6.00']
+    # dfPedidos[dfPedidos['Recurso'] == 'CHAPA LQ 6.00']
 
     dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'], format='%d/%m/%Y')
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
@@ -191,10 +202,15 @@ def tratamento():
     tabelaGeralDataProduto = tabelaGeralDataProduto.sort_values(by='datas_tb1')
     tabelaGeralDataProduto['natureza'] = 'saida'
 
+    # tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
+
     dezDiasUteis = tabelaGeralDataProduto['datas_tb1'].drop_duplicates().reset_index(drop=True)
     dezDiasUteis = dezDiasUteis.loc[0:9].tolist()
 
     dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev Con Mov Est(CMM)']]
+
+    # dfProdutos[dfProdutos['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
+
 
     # dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     # dfProdutos['Estoque Total'] = dfProdutos['Estoque Total'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
@@ -208,12 +224,17 @@ def tratamento():
 
     dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto')
 
+    # dfProdutos[dfProdutos['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
+
     dfPedidos = dfPedidos.rename(columns={'Recurso':'produto', 'Data Entrega':'datas_tb1'})
     dfPedidos['natureza'] = 'entrada'
     dfPedidos = dfPedidos[['produto', 'datas_tb1','natureza', 'Qde Ped']]
     dfPedidos = dfPedidos.iloc[:,0:4]
     dfPedidos['datas_tb1'] = pd.to_datetime(dfPedidos['datas_tb1'], format='%d/%m/%Y' )
     dfPedidos = dfPedidos[['datas_tb1', 'produto', 'natureza', 'Qde Ped']]
+
+    dfPedidos["Qde Ped"] = dfPedidos["Qde Ped"].str.replace(".", "").str.replace(",", ".").astype(float)
+    dfPedidos = dfPedidos.groupby(["produto", "datas_tb1","natureza"], as_index=False)["Qde Ped"].sum()
 
     #tabelaGeralDataProduto = tabelaGeralDataProduto.append(dfPedidos).sort_values(by='datas_tb1')
     tabelaGeralDataProduto = pd.concat([tabelaGeralDataProduto, dfPedidos]).sort_values(by='datas_tb1')
@@ -223,6 +244,8 @@ def tratamento():
     # tabelaGeralDataProduto['Qde Ped'] = tabelaGeralDataProduto['Qde Ped'].apply(lambda x: float(x.replace(".","").replace(",",".")))
     tabelaGeralDataProduto = tabelaGeralDataProduto.replace(np.nan,0)
     tabelaGeralDataProduto = tabelaGeralDataProduto.rename(columns={'Qde Ped':'entradas'})
+    
+    # tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
 
     qtdProdutosUnico = len(tabelaGeralDataProduto['produto'].unique())
     
@@ -248,6 +271,14 @@ def tratamento():
     # dfDezDias['Quantidade#Saída'] = dfDezDias['Quantidade#Saída'].astype(float) * -1
 
     dfDezDias = dfDezDias.rename(columns={'Recurso':'produto'})
+
+    # "CHAPA LQ 6.00 - CHAPA LQ 6.00"
+    # 462
+
+    # substring = "CHAPA LQ 6.00 - CHAPA LQ 6.00"
+    # indices = [i for i, item in enumerate(tabelaGeralDataProduto['produto'].unique()) if substring in item]
+
+    # print(f"Índices dos itens que contêm '{substring}': {indices}")
 
     for i in range(qtdProdutosUnico):
         
@@ -313,6 +344,7 @@ def tratamento():
             continue
         
     tabelaFinal.reset_index(drop=True, inplace=True)
+    # tabelaFinal[tabelaFinal['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
 
     dfProdutos = dfProdutos.merge(dfDezDias, on='produto', how='left')
 
@@ -538,6 +570,7 @@ if selectGrupo != 'Selecione':
         
         df_grafico = tabelaFinal[tabelaFinal['produto'] == produtosUnico[produto]]
         df_grafico1 = tbCorrigida[tbCorrigida['produto'] == produtosUnico[produto]]
+        print(df_grafico)
 
         titulo = 'Produto: ' + produtosUnico[produto]
 
