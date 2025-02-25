@@ -182,9 +182,7 @@ def tratamento():
     data_string = hoje.strftime('%Y-%m-%d')
 
     dfSimulacao, dfDatas, dfPedidos = load_sheets()
-
-    # dfSimulacao[dfSimulacao['Código'] == 'CHAPA LQ 6.00']
-    # dfPedidos[dfPedidos['Recurso'] == 'CHAPA LQ 6.00']
+    # dfSimulacao[dfSimulacao['Código'] == '222401']
 
     dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'], format='%d/%m/%Y')
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
@@ -202,7 +200,7 @@ def tratamento():
     tabelaGeralDataProduto = tabelaGeralDataProduto.sort_values(by='datas_tb1')
     tabelaGeralDataProduto['natureza'] = 'saida'
 
-    # tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
+    # tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == '222401 - CUBO RODA F. FUND. NOD. GGG-50" F6']
 
     dezDiasUteis = tabelaGeralDataProduto['datas_tb1'].drop_duplicates().reset_index(drop=True)
     dezDiasUteis = dezDiasUteis.loc[0:9].tolist()
@@ -510,7 +508,6 @@ def tratamento():
 # dfProdutos[dfProdutos['produto'] == '313210 - CATALISADOR PU 1/1 5058 COMP B']
 
 dfGrupo = pd.read_csv('grupo.csv', sep=';') 
-
 tbGrupo = dfGrupo[['grupo']]
 # tbProduto = dfGrupo[['produto']]
 
@@ -545,6 +542,8 @@ with st.sidebar:
 
 if selectGrupo != 'Selecione':
 
+    print(selectGrupo)
+
     # produto1='240471 - CILINDRO TELESCÓPICO CBH 6T 10 OC NV'
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
@@ -560,6 +559,9 @@ if selectGrupo != 'Selecione':
     tbCorrigida = tbCorrigida[tbCorrigida['grupo'] == selectGrupo]
     tabelaFinal = tabelaFinal[tabelaFinal['grupo'] == selectGrupo]
 
+    print(tbCorrigida)
+    print(tabelaFinal)
+
     tabelaFinal = tabelaFinal.sort_values(['datas_tb1', 'natureza'], ascending=[True, False]).reset_index(drop=True)
     
     tabelaFinal['valor_0'] = 0
@@ -570,7 +572,6 @@ if selectGrupo != 'Selecione':
         
         df_grafico = tabelaFinal[tabelaFinal['produto'] == produtosUnico[produto]]
         df_grafico1 = tbCorrigida[tbCorrigida['produto'] == produtosUnico[produto]]
-        print(df_grafico)
 
         titulo = 'Produto: ' + produtosUnico[produto]
 
