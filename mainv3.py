@@ -218,7 +218,7 @@ def tratamento():
     dfProdutos['consumoDiario'] = dfProdutos['Média 3M'] * 3 / 60
     dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 10
  
-    tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=';')
+    tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=',')
 
     dfProdutos = dfProdutos.merge(tabelaProdutoGrupo, on='produto')
 
@@ -257,7 +257,7 @@ def tratamento():
     # tabelaFinal.loc[tabelaFinal["datas_tb1"].isin(dezDiasUteis), "consumoDiario"] = dfDezDias["consumoDiario"]
 
     # dfDezDias = pd.read_csv("dezdias.csv", sep=';', encoding='iso-8859-1')
-    dfDezDias = pd.read_csv("dezdiassimulado.csv", sep=';', encoding='iso-8859-1')
+    dfDezDias = pd.read_csv("dezdiassimulado.csv", sep=',', encoding='iso-8859-1')
     colunas = ['Recurso','Quantidade#Saída']
     dfDezDias = dfDezDias.set_axis(colunas,axis=1,copy=False)
 
@@ -354,13 +354,14 @@ def tratamento():
     dfProdutos.rename(columns={'Quantidade#Saída':'mediaDezDias'}, inplace=True)
     
     for i in range(len(tabelaFinal)):
-        if tabelaFinal['datas_tb1'][i] in dezDiasUteis:
-            tabelaFinal['consumoDiario'][i] = float(dfProdutos[dfProdutos['produto'] == tabelaFinal['produto'][i]]['mediaDezDias'].reset_index(drop=True)) / 10
-        else:
-            continue
+        try:
+            if tabelaFinal['datas_tb1'][i] in dezDiasUteis:
+                tabelaFinal['consumoDiario'][i] = float(dfProdutos[dfProdutos['produto'] == tabelaFinal['produto'][i]]['mediaDezDias'].reset_index(drop=True)) / 10
+            else:
+                continue
+        except:
+            tabelaFinal['consumoDiario'][i] = 0
 
-    #tabelaFinal['estoqueMinimo'] = tabelaFinal['consumoDiario'] * 10
-    
     corrigido = tabelaFinal.copy()
     #corrigido = tabelaFinal.merge(corrigido)
     corrigido = corrigido[corrigido['natureza'] == 'saida'][['datas_tb1','produto', 'grupo']]
@@ -507,7 +508,7 @@ def tratamento():
 # tabelaFinal[tabelaFinal['produto'] == '313210 - CATALISADOR PU 1/1 5058 COMP B']
 # dfProdutos[dfProdutos['produto'] == '313210 - CATALISADOR PU 1/1 5058 COMP B']
 
-dfGrupo = pd.read_csv('grupo.csv', sep=';') 
+dfGrupo = pd.read_csv('grupo.csv', sep=',') 
 tbGrupo = dfGrupo[['grupo']]
 # tbProduto = dfGrupo[['produto']]
 
@@ -541,8 +542,6 @@ with st.sidebar:
     selectProduto = st.selectbox("Selecione o produto: ", listaProdutos)
 
 if selectGrupo != 'Selecione':
-
-    print(selectGrupo)
 
     # produto1='240471 - CILINDRO TELESCÓPICO CBH 6T 10 OC NV'
 
