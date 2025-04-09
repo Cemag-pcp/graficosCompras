@@ -126,8 +126,19 @@ def tratamento():
     dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     dfProdutos['Prev Con Mov Est(CMM)'] = dfProdutos['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
 
-    dfProdutos['consumoDiario'] = dfProdutos['Média 3M'] * 3 / 60
-    dfProdutos['estoqueMinimo'] = dfProdutos['consumoDiario'] * 10
+    """
+    consumo diário: Média 3M * (3 / 60) 9
+    nova regra: div maior valor dos 3 ('Média 3M', 'Cons Mes Anterior', 'Simulado Pend Vendas') por 20.
+    
+    estoque mínimo: consumo diário * 10
+    nova regra: maior dos 3 ('Média 3M', 'Cons Mes Anterior', 'Simulado Pend Vendas') valores div por 2.
+    """
+
+    # maior valor entre as três colunas
+    maior_valor = dfProdutos[['Média 3M', 'Cons Mes Anterior', 'Simulado Pend Vendas']].max(axis=1)
+
+    dfProdutos['consumoDiario'] = maior_valor / 20
+    dfProdutos['estoqueMinimo'] = maior_valor / 2
 
     tabelaProdutoGrupo = pd.read_csv("grupo.csv", sep=';')
 
