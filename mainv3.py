@@ -209,7 +209,6 @@ def tratamento():
 
     # dfProdutos[dfProdutos['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
 
-
     # dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     # dfProdutos['Estoque Total'] = dfProdutos['Estoque Total'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
     # dfProdutos['DEE - Dias Em Est.'] = dfProdutos['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
@@ -286,70 +285,119 @@ def tratamento():
     # indices = [i for i, item in enumerate(tabelaGeralDataProduto['produto'].unique()) if substring in item]
 
     # print(f"Índices dos itens que contêm '{substring}': {indices}")
+    
+    produtosUnicos = tabelaGeralDataProduto['produto'].unique()
 
-    for i in range(qtdProdutosUnico):
+    # for i in range(qtdProdutosUnico):
         
-        try:
+    #     try:
 
-            produtosUnicos = tabelaGeralDataProduto['produto'].unique()
+    #         produtosUnicos = tabelaGeralDataProduto['produto'].unique()
 
-            produto = produtosUnicos[i]
-            tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == produto].reset_index(drop=True)
-            tabelaFiltrada.reset_index(drop=True, inplace=True) 
-            tabelaFiltrada['saldoAtual'] = ''
+    #         produto = produtosUnicos[i]
+    #         tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == produto].reset_index(drop=True)
+    #         tabelaFiltrada.reset_index(drop=True, inplace=True) 
+    #         tabelaFiltrada['saldoAtual'] = ''
             
-            try:
-                saldoAtual = dfProdutos[dfProdutos['produto'] == produto].reset_index(drop=True)['Estoque Total'][0]       
-            except:
-                continue
+    #         try:
+    #             saldoAtual = dfProdutos[dfProdutos['produto'] == produto].reset_index(drop=True)['Estoque Total'][0]       
+    #         except:
+    #             continue
                         
-            tabelaFiltrada = tabelaFiltrada.sort_values(by=['natureza'], ascending=False)
-            tabelaFiltrada = tabelaFiltrada.sort_values(by=['datas_tb1'], ascending=True)
+    #         tabelaFiltrada = tabelaFiltrada.sort_values(by=['natureza'], ascending=False)
+    #         tabelaFiltrada = tabelaFiltrada.sort_values(by=['datas_tb1'], ascending=True)
             
-            tabelaFiltrada = tabelaFiltrada.reset_index(drop=True)
+    #         tabelaFiltrada = tabelaFiltrada.reset_index(drop=True)
 
-            tabelaFiltrada['saldoAtual'][0] = saldoAtual
+    #         tabelaFiltrada['saldoAtual'][0] = saldoAtual
+
+    #         for j in range(1, len(tabelaFiltrada)):
+            
+    #             if tabelaFiltrada['datas_tb1'][j] in dezDiasUteis:
+                    
+    #                 try:
+    #                     consumoSimuladoDezDias = float(dfDezDias[dfDezDias['produto'] == tabelaFiltrada['produto'][j]]['Quantidade#Saída'].reset_index(drop=True)[0]) / 10
+    #                 except:
+    #                     consumoSimuladoDezDias = 0
+
+    #                 consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
+
+    #                 if consumoSimuladoDezDias > consumoDiario:
+
+    #                     consumoDiario = consumoSimuladoDezDias
+                    
+    #                 else:
+
+    #                     consumoDiario = consumoDiario
+    #             else:
+
+    #                 consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
+                
+    #             # consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
+
+    #             entrada = tabelaFiltrada['entradas'][j]
+    #             saldoOntem = tabelaFiltrada['saldoAtual'][j-1]
+
+    #             if tabelaFiltrada['natureza'][j] == 'entrada':
+                    
+    #                 tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) + float(entrada)
+
+    #             else:    
+
+    #                 tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) - float(consumoDiario)
+
+    #         tabelaFinal = pd.concat([tabelaFinal, tabelaFiltrada])
+
+    #     except:
+    #         continue
+        
+    for produto in produtosUnicos:
+        try:
+            tabelaFiltrada = tabelaGeralDataProduto[tabelaGeralDataProduto['produto'] == produto].copy()
+            tabelaFiltrada.sort_values(by=['natureza'], ascending=False, inplace=True)
+            tabelaFiltrada.sort_values(by=['datas_tb1'], ascending=True, inplace=True)
+            tabelaFiltrada.reset_index(drop=True, inplace=True)
+            tabelaFiltrada['saldoAtual'] = ''
+
+            dados_produto = dfProdutos[dfProdutos['produto'] == produto]
+            if dados_produto.empty:
+                continue
+
+            saldoAtual = dados_produto['Estoque Total'].values[0]
+            consumo_padrao = dados_produto['consumoDiario'].values[0]
+            tabelaFiltrada.loc[0, 'saldoAtual'] = saldoAtual
 
             for j in range(1, len(tabelaFiltrada)):
-            
-                if tabelaFiltrada['datas_tb1'][j] in dezDiasUteis:
-                    
-                    try:
-                        consumoSimuladoDezDias = float(dfDezDias[dfDezDias['produto'] == tabelaFiltrada['produto'][j]]['Quantidade#Saída'].reset_index(drop=True)[0]) / 10
-                    except:
-                        consumoSimuladoDezDias = 0
+                data = tabelaFiltrada.loc[j, 'datas_tb1']
+                natureza = tabelaFiltrada.loc[j, 'natureza']
+                entrada = tabelaFiltrada.loc[j, 'entradas']
+                saldoOntem = tabelaFiltrada.loc[j - 1, 'saldoAtual']
 
-                    consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
-
-                    if consumoSimuladoDezDias > consumoDiario:
-
-                        consumoDiario = consumoSimuladoDezDias
-                    
+                # Consumo simulado
+                if data in dezDiasUteis:
+                    df_simulado = dfDezDias[dfDezDias['produto'] == produto]
+                    if not df_simulado.empty:
+                        consumoSimuladoDezDias = float(df_simulado['Quantidade#Saída'].values[0]) / 10
+                        consumoDiario = max(consumoSimuladoDezDias, consumo_padrao)
                     else:
-
-                        consumoDiario = consumoDiario
+                        consumoDiario = consumo_padrao
                 else:
+                    consumoDiario = consumo_padrao
 
-                    consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
-                
-                # consumoDiario = dfProdutos[dfProdutos['produto'] == tabelaFiltrada['produto'][j]]['consumoDiario'].reset_index(drop=True)[0]
+                # Calcula saldo
+                if natureza == 'entrada':
+                    saldoAtualizado = float(saldoOntem) + float(entrada)
+                else:
+                    saldoAtualizado = float(saldoOntem) - float(consumoDiario)
 
-                entrada = tabelaFiltrada['entradas'][j]
-                saldoOntem = tabelaFiltrada['saldoAtual'][j-1]
+                tabelaFiltrada.loc[j, 'saldoAtual'] = saldoAtualizado
 
-                if tabelaFiltrada['natureza'][j] == 'entrada':
-                    
-                    tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) + float(entrada)
+            tabelaFinal = pd.concat([tabelaFinal, tabelaFiltrada], ignore_index=True)
 
-                else:    
-
-                    tabelaFiltrada['saldoAtual'][j] = float(saldoOntem) - float(consumoDiario)
-
-            tabelaFinal = pd.concat([tabelaFinal, tabelaFiltrada])
-
-        except:
+        except Exception as e:
+            print(f"Erro ao processar produto {produto}: {e}")
             continue
-        
+
     tabelaFinal.reset_index(drop=True, inplace=True)
     # tabelaFinal[tabelaFinal['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
 
@@ -631,9 +679,6 @@ if selectGrupo != 'Selecione':
 
     tbCorrigida = tbCorrigida[tbCorrigida['grupo'] == selectGrupo]
     tabelaFinal = tabelaFinal[tabelaFinal['grupo'] == selectGrupo]
-
-    print(tbCorrigida)
-    print(tabelaFinal)
 
     tabelaFinal = tabelaFinal.sort_values(['datas_tb1', 'natureza'], ascending=[True, False]).reset_index(drop=True)
     
