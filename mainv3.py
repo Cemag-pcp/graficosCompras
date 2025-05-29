@@ -130,7 +130,8 @@ def load_sheets():
     final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'] = final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['DEE - Dias Em Est.'] = final_df['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['Dias\nRessupr'] = final_df['Dias\nRessupr'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Dias de seguranca'] = final_df['Dias de seguranca'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Dias de seg.'] = final_df['Dias de seg.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Estoque Mínimo'] = final_df['Estoque Mínimo'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
 
     final_df = final_df.groupby(["Descrição", "Código"]).sum(numeric_only=True).reset_index()
     
@@ -186,9 +187,19 @@ def tratamento():
 
     dfPedidos['Data Entrega'] = pd.to_datetime(dfPedidos['Data Entrega'], format='%d/%m/%Y')
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: hoje if x < hoje else x)
+
+    # se cair em um sábado colocar para sexta se cair um domingo, colocar a data de entrega para a segunda-feira
+    dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].apply(lambda x: x + pd.Timedelta(days=(5 - x.weekday()) % 7) if x.weekday() == 6 else x)
+
     dfPedidos['Data Entrega'] = dfPedidos['Data Entrega'].dt.strftime('%d/%m/%Y')
 
     dfDatasDiasUteis = dfDatas[dfDatas['natureza_tb1'] == 'saida'][['datas_tb1']]
+    
+    # excluir sabados e domingos
+    dfDatasDiasUteis['datas_tb1'] = pd.to_datetime(dfDatasDiasUteis['datas_tb1'], format='%d/%m/%Y')
+    dfDatasDiasUteis = dfDatasDiasUteis[dfDatasDiasUteis['datas_tb1'].dt.dayofweek < 5].reset_index(drop=True)
+    dfDatasDiasUteis['datas_tb1'] = dfDatasDiasUteis['datas_tb1'].dt.strftime('%d/%m/%Y')
+
     dfSimulacao = dfSimulacao[dfSimulacao['Média 3M'] != ''].reset_index(drop=True)
 
     dfSimulacao['produto'] = dfSimulacao['Código'] + ' - ' + dfSimulacao['Descrição']
@@ -206,8 +217,8 @@ def tratamento():
     dezDiasUteis = tabelaGeralDataProduto['datas_tb1'].drop_duplicates().reset_index(drop=True)
     dezDiasUteis = dezDiasUteis.loc[0:9].tolist()
 
-    dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev Con Mov Est(CMM)', 'Cons Mes\nAnterior', 'Simulado \nPend Vendas']]
-
+    dfProdutos = dfSimulacao[['produto', 'Média 3M', 'Estoque Total', 'DEE - Dias Em Est.', 'Prev Con Mov Est(CMM)', 'Cons Mes\nAnterior', 'Simulado \nPend Vendas','SIMULAÇÃO / (F.Pend/Fat.MM)','Estoque Mínimo', 'Dias\nRessupr']]
+    
     # dfProdutos[dfProdutos['produto'] == 'CHAPA LQ 6.00 - CHAPA LQ 6.00']
 
     # dfProdutos['Média 3M'] = dfProdutos['Média 3M'].apply(lambda x: float(x.replace(".", '').replace(',','.')))
@@ -222,10 +233,11 @@ def tratamento():
     #nova regra: maior dos 3 ('Média 3M', 'Cons Mes\nAnterior', 'Simulado \nPend Vendas') valores div por 2.
 
     # maior valor entre as três colunas
-    maior_valor = dfProdutos[['Média 3M', 'Cons Mes\nAnterior', 'Simulado \nPend Vendas']].max(axis=1)
-
+    # maior_valor = dfProdutos[['Média 3M', 'Cons Mes\nAnterior', 'Simulado \nPend Vendas']].max(axis=1)
+    maior_valor = dfProdutos[['SIMULAÇÃO / (F.Pend/Fat.MM)', 'Prev Con Mov Est(CMM)']].max(axis=1)
+    
     dfProdutos['consumoDiario'] = maior_valor / 20
-    dfProdutos['estoqueMinimo'] = maior_valor / 2
+    dfProdutos['estoqueMinimo'] = dfSimulacao['Estoque Mínimo']
     
     dfProdutos['descricao'] = dfProdutos['produto'].apply(lambda x: x.split('-', maxsplit=1)[1].rstrip())
     dfProdutos['codigo'] = dfProdutos['produto'].apply(lambda x: x.split('-', maxsplit=1)[0].rstrip())
@@ -375,8 +387,8 @@ def tratamento():
 
     corrigido = corrigido[corrigido['natureza'] == 'saida'][['datas_tb1','codigo','descricao', 'grupo']]
 
-    compraMaxima = dfProdutos[['codigo','descricao','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario']]#,'mediaDezDias']]
- 
+    compraMaxima = dfProdutos[['codigo','descricao','Média 3M','Estoque Total','estoqueMinimo', 'consumoDiario', 'Dias\nRessupr']]#,'mediaDezDias']]
+
     corrigido['valorCorrigido'] = 0
 
     tbCorrigida = pd.DataFrame()
@@ -400,7 +412,7 @@ def tratamento():
         grupo = dados['grupo'][0]
         is_chapa = grupo == 'Chapas'
 
-        maximo = 10000 if is_chapa else info_produto['Média 3M'].values[0]
+        maximo = info_produto['Dias\nRessupr'].values[0] * info_produto['consumoDiario'].values[0]#10000 if is_chapa else info_produto['Média 3M'].values[0]
         saldoInicial = info_produto['Estoque Total'].values[0]
         estoqueMinimo = info_produto['estoqueMinimo'].values[0]
         # mediaDezDias = float(info_produto['mediaDezDias'].values[0]) / 10
@@ -511,8 +523,6 @@ if selectGrupo != 'Selecione':
 
     tabelaFinal = tabelaFinal.sort_values(['datas_tb1', 'natureza'], ascending=[True, False]).reset_index(drop=True)
     
-    tabelaFinal[(tabelaFinal['codigo'] == '222404') & (tabelaFinal['datas_tb1'] > '2025-06-11')]
-
     tabelaFinal['valor_0'] = 0
     
     tbCorrigida['produto'] = tbCorrigida['codigo'] + ' - ' + tbCorrigida['descricao']
@@ -520,6 +530,10 @@ if selectGrupo != 'Selecione':
 
     for produto in range(len(produtosUnico)):
         
+        print(tbCorrigida)
+        print(tabelaFinal)
+        print(dfProdutos)
+
         df_grafico = tabelaFinal[tabelaFinal['produto'] == produtosUnico[produto]]
         df_grafico1 = tbCorrigida[tbCorrigida['produto'] == produtosUnico[produto]]
 
@@ -536,7 +550,16 @@ if selectGrupo != 'Selecione':
         fim = max(df_grafico['datas_tb1'])  # Defina a data de fim com base nos rótulos originais
         novos_rotulos = pd.date_range(start=inicio, end=fim, freq='5D')
 
-        fig.update_layout(title={'text': titulo, 'x': 0.2}, xaxis_title='Data', xaxis_tickangle=45, yaxis_title='Valor', width=800, height=600, xaxis=dict(tickmode='array', tickvals=novos_rotulos, tickformat='%Y-%m-%d'))
+        # fig.update_layout(title={'text': titulo, 'x': 0.2}, xaxis_title='Data', xaxis_tickangle=45, yaxis_title='Valor', width=800, height=600, xaxis=dict(tickmode='array', tickvals=novos_rotulos, tickformat='%Y-%m-%d'))
+        fig.update_layout(
+            title={'text': titulo, 'x': 0.2},
+            xaxis_title='Data',
+            xaxis_tickangle=45,
+            yaxis_title='Valor',
+            width=800,
+            height=600,
+            xaxis=dict(type='category', tickformat='%Y-%m-%d')  # Isso força eixo X categórico
+        )
 
         st.plotly_chart(fig)
 
@@ -546,7 +569,7 @@ if selectGrupo != 'Selecione':
 if selectProduto != 'Selecione':
 
     tbCorrigida, tabelaFinal, dfProdutos = tratamento()
-
+    
     tbCorrigida.dropna(inplace=True)
     tabelaFinal.dropna(inplace=True)
     dfProdutos.dropna(inplace=True)
@@ -579,7 +602,16 @@ if selectProduto != 'Selecione':
         fim = max(df_grafico['datas_tb1'])  # Defina a data de fim com base nos rótulos originais
         novos_rotulos = pd.date_range(start=inicio, end=fim, freq='5D')
 
-        fig.update_layout(title={'text': titulo, 'x': 0.2}, xaxis_title='Data', xaxis_tickangle=45, yaxis_title='Valor', width=800, height=600, xaxis=dict(tickmode='array', tickvals=novos_rotulos, tickformat='%Y-%m-%d'))
+        fig.update_layout(
+            title={'text': titulo, 'x': 0.2},
+            xaxis_title='Data',
+            xaxis_tickangle=45,
+            yaxis_title='Valor',
+            width=800,
+            height=600,
+            # Remova a parte de `tickvals` e `tickmode`
+            xaxis=dict(type='category', tickformat='%Y-%m-%d')  # Isso força eixo X categórico
+        )
 
         st.plotly_chart(fig)
 
