@@ -432,8 +432,12 @@ def plotar_grafico_serrote(produto_escolhido,grupo_escolhido,df_simulacao, df_pe
 
     else:
 
-        # Pega apenas a linha do produto escolhido
-        linha_produto = df_simulacao[df_simulacao['Código'] == produto_escolhido].iloc[0]
+        try:
+            # Pega apenas a linha do produto escolhido
+            linha_produto = df_simulacao[df_simulacao['Código'] == produto_escolhido].iloc[0]
+        except IndexError:
+            st.error(f'No filtro de "Produto" escolha a opção "Selecione..."')
+            return
 
         estoque_atual = linha_produto['Est.Almox Central']
         estoque_minimo = linha_produto['Estoque Mínimo']
