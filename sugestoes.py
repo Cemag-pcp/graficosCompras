@@ -10,13 +10,6 @@ import datetime
 from datetime import datetime, timedelta
 import numpy as np
 from google.oauth2 import service_account
-import os
-import chromadb
-from chromadb.utils import embedding_functions
-from openai import OpenAI
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 from utils import adicionar_dias_uteis, formatar_data_brasileiro 
 
