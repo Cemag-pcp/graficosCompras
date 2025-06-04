@@ -547,7 +547,7 @@ def plotar_grafico_serrote(produto_escolhido,grupo_escolhido,df_simulacao, df_pe
 st.title('Análise de Consumo e Previsão de Estoque')
 
 # Cria abas
-aba1, aba2 = st.tabs(["🔍 Visualização e Filtros", "📜 Regras do DataFrame"])
+aba1, aba2 = st.tabs(["🔍 Visualização e Filtros", "📜 Regras"])
 
 with aba1:
     with st.sidebar:
