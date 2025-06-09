@@ -28,109 +28,60 @@ def load_sheets():
 
     credentials = service_account.Credentials.from_service_account_info(service_account_info, scopes=scope)
     sa = gspread.authorize(credentials)
-
-    ## Conectando com google sheets e acessando testesGraficos
-
-    sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
-    worksheet = 'testesGraficos'
-
-    # sa = gspread.service_account(filename)
-    sh = sa.open(sheet)
-    wks = sh.worksheet(worksheet)
-
-    cabecalho = wks.row_values(2)
-    
-    dfDatas = wks.get()
-    dfDatas = pd.DataFrame(dfDatas)
-    dfDatas = dfDatas.iloc[:,0:19].set_axis(cabecalho, axis=1, copy=False)
-    dfDatas = dfDatas.iloc[2:]
+    sh = sa.open_by_key('1s6w-B4kqHiSOk6l9m8jA67-43b6l_ejWN-E2SWavoOs')
         
-    ## Conectando com google sheets e acessando Análise Previsão de Consumo (CMM / NTP ) DEE
+    ## Conectando com google sheets e acessando Análise Previsão de Consumo (Materiais Custo Indireto "Requisitados")
 
-    sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
-    worksheet = 'Simulação Pend. Vendas'
+    worksheet = 'Análise Previsão de Consumo'
 
     # sa = gspread.service_account(filename)
-    sh1 = sa.open(sheet)
-    wks1 = sh1.worksheet(worksheet)
+    wks1 = sh.worksheet(worksheet)
     dfSimulacao = wks1.get()
     dfSimulacao = pd.DataFrame(dfSimulacao)
 
     cabecalho = wks1.row_values(2)
 
-    #tratando planilha Análise Previsão de Consumo (CMM / NTP ) DEE
-    dfSimulacao = dfSimulacao.set_axis(cabecalho, axis=1)
+    #tratando planilha Análise Previsão de Consumo (Materiais Custo Indireto "Requisitados")
+    dfSimulacao = dfSimulacao.iloc[:,:len(cabecalho)].set_axis(cabecalho, axis=1)
     dfSimulacao = dfSimulacao.iloc[2:]
 
-    ## Conectando com google sheets e acessando Análise Previsão de Consumo (CMM / NTP ) DEE
+    ## Conectando com google sheets e acessando Análise Previsão de Consumo (Materiais Custo Indireto "Requisitados")
 
-    sheet = 'Análise Previsão de Consumo (CMM / NTP ) DEE'
     worksheet = 'Dados Pedidos'
 
     # sa = gspread.service_account(filename)
-    sh2 = sa.open(sheet)
-    wks2 = sh2.worksheet(worksheet)
+    wks2 = sh.worksheet(worksheet)
     dfPedidos = wks2.get()
     dfPedidos = pd.DataFrame(dfPedidos)
 
-    dfPedidos.dropna(axis=1, inplace=True)
+    # dfPedidos.dropna(axis=1)
 
     cabecalho = wks2.row_values(1)
     cabecalho = cabecalho[:37]
 
     #tratando planilha Análise Previsão de Consumo (CMM / NTP ) DEE
-    dfPedidos = dfPedidos.set_axis(cabecalho, axis=1)
+    dfPedidos = dfPedidos.iloc[:,:len(cabecalho)].set_axis(cabecalho, axis=1)
     dfPedidos = dfPedidos.iloc[1:]
 
-    grupo_df = pd.read_csv('agrupamento_chapas.csv', sep=';')
-
-    # Filtrar linhas do DataFrame original pelos códigos na tabela de grupo
-    duplicated_rows = dfSimulacao[dfSimulacao["Código"].isin(grupo_df["codigo"])].copy()
-
-    # Mesclar as linhas duplicadas com o DataFrame de grupos
-    duplicated_rows = duplicated_rows.merge(grupo_df, left_on="Código", right_on="codigo")
-
-    # Ajustar colunas para refletir os valores do grupo
-    duplicated_rows["Descrição"] = duplicated_rows["grupo"]
-    duplicated_rows["Código"] = duplicated_rows["grupo"]
-
-    # Concatenar as linhas duplicadas com o DataFrame original
-    final_df = pd.concat([dfSimulacao, duplicated_rows.drop(columns=["grupo", "codigo"])])
+    final_df = dfSimulacao.copy()
 
     # Ordenar o DataFrame para manter a consistência
     final_df = final_df.reset_index(drop=True)
 
     final_df['Média 3M'] = final_df['Média 3M'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['Cons Mes\nAnterior'] = final_df['Cons Mes\nAnterior'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Simulado \nPend Vendas'] = final_df['Simulado \nPend Vendas'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Simulado \nPend Vendas'] = final_df['Simulado \nPend Vendas'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['Est.Almox Central'] = final_df['Est.Almox Central'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Est. Produção'] = final_df['Est. Produção'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Estoque Total'] = final_df['Estoque Total'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Ped.Compras\n Pendente'] = final_df['Ped.Compras\n Pendente'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Est. Produção'] = final_df['Est. Produção'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Estoque Total'] = final_df['Estoque Total'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Est.Almox Central'] = final_df['Est.Almox Central'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    final_df['Ped.Compra\n Pendente'] = final_df['Ped.Compra\n Pendente'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['Prev Con Mov Est(CMM)'] = final_df['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'] = final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'] = final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['DEE - Dias Em Est.'] = final_df['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
     final_df['Dias\nRessupr'] = final_df['Dias\nRessupr'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Dias de seg.'] = final_df['Dias de seg.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 10)
-    final_df['Estoque Mínimo'] = final_df['Estoque Mínimo'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-
-    final_df = final_df.groupby(["Descrição", "Código"]).agg({
-        "Média 3M": "mean",
-        "Cons Mes\nAnterior": "mean",
-        "Dias\nRessupr": "max",
-        "Dias de seg.": "max",
-        "Estoque Mínimo": "mean",
-        "Prev Con Mov Est(CMM)": "mean",
-        "SIMULAÇÃO / (F.Pend/Fat.MM)": "max",
-
-        # restante com soma
-        "Simulado \nPend Vendas": "sum",
-        "Est.Almox Central": "sum",
-        "Est. Produção": "sum",
-        "Estoque Total": "sum",
-        "Ped.Compras\n Pendente": "sum",
-        "DEE - Dias Em Est.": "sum"
-    }).reset_index()
+    final_df['Dias de seguranca'] = final_df['Dias de seguranca'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 10)
+    final_df['Estoque Mínimo'] = (final_df['Prev Con Mov Est(CMM)'] / 20 ) * final_df['Dias de seguranca']
 
     dfSimulacao = final_df
 
@@ -145,36 +96,20 @@ def load_sheets():
     dfPedidos["Código"] = dfPedidos["Recurso"].str.split(" - ").str[0]
     # dfPedidos[dfPedidos["Recurso"] == 'CHAPA LQ 2.00 x 1500']
     
-    # Filtrar linhas do DataFrame original pelos códigos na tabela de grupo
-    duplicated_rows = dfPedidos[dfPedidos["Código"].isin(grupo_df["codigo"])].copy()
-    # duplicated_rows['Código'] = duplicated_rows['Código'].apply(lambda x: f"{x} - {x}")
-
-    # Mesclar as linhas duplicadas com o DataFrame de grupos
-    duplicated_rows = duplicated_rows.merge(grupo_df, left_on="Código", right_on="codigo")
-
-    # Ajustar colunas para refletir os valores do grupo
-    duplicated_rows["Recurso"] = duplicated_rows["grupo"]
-    duplicated_rows["Código"] = duplicated_rows["grupo"]
-    duplicated_rows['Recurso'] = duplicated_rows['Recurso'].apply(lambda x: f"{x} - {x}")
-
-    # Concatenar as linhas duplicadas com o DataFrame original
-    final_df = pd.concat([dfPedidos, duplicated_rows.drop(columns=["grupo", "codigo"])])
-
     # Ordenar o DataFrame para manter a consistência
     final_df = final_df.reset_index(drop=True)
-    final_df=final_df[final_df['Recurso']!='']
+    final_df=final_df[final_df['Código']!='']
     
-
     dfPedidos = final_df
 
     # dfSimulacao[dfSimulacao['Código'] == 'CHAPA LQ 6.00']
     # dfPedidos[dfPedidos['Código'] == '222404']
 
-    return dfSimulacao, dfDatas, dfPedidos
+    return dfSimulacao, dfPedidos
 
 def tratamento_geral():
 
-    df_simulacao, dfDatas, df_pedidos = load_sheets()
+    df_simulacao, df_pedidos = load_sheets()
 
     df_pedidos['Data Entrega'] = pd.to_datetime(df_pedidos['Data Entrega'], format='%d/%m/%Y', errors='coerce')
     # tudo que for sabado joga pra sexta e tudo que for domingo joga pra segunda
@@ -182,7 +117,7 @@ def tratamento_geral():
         lambda x: x - timedelta(days=1) if x.weekday() == 5 else (x + timedelta(days=1) if x.weekday() == 6 else x)
     )
 
-    grupos_df = pd.read_csv('grupos_atualizados.csv', sep=',')
+    grupos_df = pd.read_csv('grupos_atualizados_indireto.csv', sep=',')
     # grupos_df['Código'] = grupos_df['produto'].apply(lambda x: str(x).split(' - ', maxsplit=1)[0])
     grupos_df = grupos_df[['Código', 'grupo']]
 
@@ -192,31 +127,23 @@ def tratamento_geral():
 
     # apenas para chapas agrupadas fazer o calculo de DEE
 
-    condicao = df_simulacao_teste['grupo'] == 'Chapa Agrupada'
-
-    df_simulacao_teste.loc[condicao, 'DEE - Dias Em Est.'] = (
-        (df_simulacao_teste.loc[condicao, 'Estoque Total'] /
-        df_simulacao_teste.loc[condicao, ['Prev Con Mov Est(CMM)', 'SIMULAÇÃO / (F.Pend/Fat.MM)']].max(axis=1)) /
-        (20 - df_simulacao_teste.loc[condicao, 'Dias de seg.'])
-    ) * 100
-
     # buscar o consumo diário
     df_simulacao_teste['consumo_diario'] = df_simulacao_teste.apply(
-        lambda row: max(row['SIMULAÇÃO / (F.Pend/Fat.MM)'], row['Prev Con Mov Est(CMM)']) / 20,
+        lambda row: row['Prev Con Mov Est(CMM)'] / 20,
         axis=1
     )
 
     # criar coluna onde mostre a data que o estoque chegará a zero
     df_simulacao_teste['data_estoque_zero'] = df_simulacao_teste.apply(
         lambda row: timedelta(days=row['Est.Almox Central'] / row['consumo_diario'])
-        if row['consumo_diario'] >= 0 else None,
+        if row['consumo_diario'] > 0 else 0,
         axis=1
     )
 
     # Aplicação no seu DataFrame - VERSÃO CORRETA
     df_simulacao_teste['dias_ate_estoque_minimo'] = df_simulacao_teste.apply(
         lambda row: (row['Est.Almox Central'] - row['Estoque Mínimo']) / row['consumo_diario']
-        if row['consumo_diario'] >= 0 else None,
+        if row['consumo_diario'] > 0 else None,
         axis=1
     )
 
@@ -228,7 +155,7 @@ def tratamento_geral():
     # Aplicação no seu DataFrame - VERSÃO CORRETA
     df_simulacao_teste['dias_ate_estoque_zero'] = df_simulacao_teste.apply(
         lambda row: row['Est.Almox Central'] / row['consumo_diario']
-        if row['consumo_diario'] >= 0 else None,
+        if row['consumo_diario'] > 0 else None,
         axis=1
     )
 
@@ -261,7 +188,7 @@ def tratamento_geral():
     # Aplicação no seu DataFrame - VERSÃO CORRETA
     df_simulacao_teste['dias_ate_estoque_minimo'] = df_simulacao_teste.apply(
         lambda row: (row['Est.Almox Central'] - row['Estoque Mínimo']) / row['consumo_diario']
-        if row['consumo_diario'] >= 0 else None,
+        if row['consumo_diario'] > 0 else None,
         axis=1
     )
 
@@ -272,14 +199,14 @@ def tratamento_geral():
 
     df_simulacao_teste['dias_ate_estoque_zero'] = df_simulacao_teste.apply(
         lambda row: row['Est.Almox Central'] / row['consumo_diario']
-        if row['consumo_diario'] >= 0 else None,
+        if row['consumo_diario'] > 0 else None,
         axis=1
     )
 
     # criar coluna onde mostre a data que o estoque chegará a zero
     df_simulacao_teste['data_estoque_zero'] = df_simulacao_teste.apply(
         lambda row: timedelta(days=row['Est.Almox Central'] / row['consumo_diario'])
-        if row['consumo_diario'] >= 0 else None,
+        if row['consumo_diario'] > 0 else None,
         axis=1
     )
 
@@ -309,7 +236,7 @@ def tratamento_geral():
     df_simulacao_teste['data_compra'] = df_simulacao_teste['data_compra'].apply(formatar_data_brasileiro)
 
     # coluna se existe ou não algum pedido de compra
-    df_simulacao_teste['tem_pedido_de_compra'] = df_simulacao_teste['Ped.Compras\n Pendente'].apply(lambda x: 'SIM' if x else 'NÃO')
+    df_simulacao_teste['tem_pedido_de_compra'] = df_simulacao_teste['Ped.Compra\n Pendente'].apply(lambda x: 'SIM' if x else 'NÃO')
 
     #retirar primeira linha
     df_simulacao_teste = df_simulacao_teste.iloc[1:]
@@ -553,10 +480,11 @@ def plotar_grafico_serrote(produto_escolhido,grupo_escolhido,df_simulacao, df_pe
 #jogar essa tabela no streamlit, apenas em formato de tabela, sem gráficos
 
 def main(df_simulacao_teste, df_pedidos, plotar_grafico_serrote):
-    st.title('Análise de Consumo e Previsão de Estoque - Mat direto')
+    
+    st.title('Análise de Consumo e Previsão de Estoque - Mat indireto')
 
     aba1, aba2 = st.tabs(["🔍 Visualização e Filtros", "📜 Regras"])
-
+        
     df_simulacao_teste['codigo_descricao'] = df_simulacao_teste['Código'] + ' - ' + df_simulacao_teste['Descrição']
 
     with aba1:
@@ -615,8 +543,8 @@ def main(df_simulacao_teste, df_pedidos, plotar_grafico_serrote):
         st.markdown("""
         - Apenas itens que estão na pendência de vendas.
         - Todos os cálculos são feitos levando em consideração apenas dados de pedidos de compra antes de atingir o estoque mínimo.
-        - **Estoque mínimo**: Valor MÁXIMO entre: ( [Prev Con Mov Est(CMM)] e [SIMULAÇÃO / (F.Pend/Fat.MM)] ) / 20 ) * Dias segurança
-        - **consumo_diario**: Valor MÁXIMO entre: ( [Prev Con Mov Est(CMM)] e [SIMULAÇÃO / (F.Pend/Fat.MM)] ) / 20 )
+        - **Estoque mínimo**: Valor MÁXIMO entre: ( [Prev Con Mov Est(CMM)] ) / 20 ) * Dias segurança
+        - **consumo_diario**: Valor MÁXIMO entre: ( [Prev Con Mov Est(CMM)] ) / 20 )
         - **dias_ate_estoque_zero**: Estoque / consumo_diario
         - **dias_ate_estoque_minimo**: [Estoque - Estoque mínimo] / consumo diário
         - **dias_ate_compra**: data_estoque_minimo - dias de ressuprimento

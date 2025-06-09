@@ -81,8 +81,20 @@ def ajustar_estoque(row, df_pedidos):
     else:
         return row['Est.Almox Central']  # ou ajuste conforme sua lógica
 
-    primeira_qde_ped = df_pedidos.loc[:, ~df_pedidos.columns.duplicated()]['Qde Ped']
-    primeira_qde_ped = primeira_qde_ped.apply(lambda x: float(str(x).replace('.', '').replace(',', '.')) if isinstance(x, str) else x)
+    try:
+        primeira_qde_ped = df_pedidos.loc[:, ~df_pedidos.columns.duplicated()]['Qde Ped']
+    except KeyError:
+        primeira_qde_ped = df_pedidos.loc[:, ~df_pedidos.columns.duplicated()]['Qdade Pedido']
+
+    primeira_qde_ped = primeira_qde_ped.apply(
+        lambda x: '0' if pd.isna(x) or str(x).strip() == '' else str(x).strip()
+    )
+
+    # Converter para float após limpar os valores
+    primeira_qde_ped = primeira_qde_ped.apply(
+        lambda x: float(str(x).replace('.', '').replace(',', '.'))
+    )
+
     df_pedidos['Qde Ped Corrigido'] = primeira_qde_ped
     
     df_pedidos['Data Entrega'] = pd.to_datetime(df_pedidos['Data Entrega'], format='%d/%m/%Y', errors='coerce')
@@ -97,6 +109,7 @@ def ajustar_estoque(row, df_pedidos):
         return row['Est.Almox Central'] + pedidos_filtrados['Qde Ped Corrigido'].sum()
     else:
         return row['Est.Almox Central']
+
 
 # criar coluna informando uma flag de "urgência" para itens com dias_ate_data_compra negativo "Urgência - Solicitar Compra" e para positivos "Dentro do prazo - x dias"
 def flag_urgencia(dias):
