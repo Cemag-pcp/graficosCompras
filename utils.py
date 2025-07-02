@@ -110,7 +110,6 @@ def ajustar_estoque(row, df_pedidos):
     else:
         return row['Est.Almox Central']
 
-
 # criar coluna informando uma flag de "urgência" para itens com dias_ate_data_compra negativo "Urgência - Solicitar Compra" e para positivos "Dentro do prazo - x dias"
 def flag_urgencia(dias):
     if pd.isna(dias):

@@ -23,6 +23,20 @@ scope = ['https://www.googleapis.com/auth/spreadsheets',
 
 warnings.filterwarnings("ignore")
 
+def tratar_valor_numerico(valor, default=0):
+    if isinstance(valor, str):
+        valor = valor.strip()
+        if valor in ('', '#REF!', '#DIV/0!', 'N/A', 'nan', 'None'):
+            return default
+        try:
+            return float(valor.replace('.', '').replace(',', '.'))
+        except ValueError:
+            return default
+    try:
+        return float(valor)
+    except (ValueError, TypeError):
+        return default
+
 @st.cache_data()
 def load_sheets():
 
@@ -99,20 +113,32 @@ def load_sheets():
 
     # Ordenar o DataFrame para manter a consistência
     final_df = final_df.reset_index(drop=True)
+    
+    colunas_para_tratar = [
+        'Média 3M', 'Cons Mes\nAnterior', 'Simulado \nPend Vendas',
+        'Est.Almox Central', 'Est. Produção', 'Estoque Total',
+        'Ped.Compras\n Pendente', 'Prev Con Mov Est(CMM)',
+        'SIMULAÇÃO / (F.Pend/Fat.MM)', 'DEE - Dias Em Est.',
+        'Dias\nRessupr', 'Dias de seg.', 'Estoque Mínimo'
+    ]
 
-    final_df['Média 3M'] = final_df['Média 3M'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Cons Mes\nAnterior'] = final_df['Cons Mes\nAnterior'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Simulado \nPend Vendas'] = final_df['Simulado \nPend Vendas'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Est.Almox Central'] = final_df['Est.Almox Central'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Est. Produção'] = final_df['Est. Produção'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Estoque Total'] = final_df['Estoque Total'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Ped.Compras\n Pendente'] = final_df['Ped.Compras\n Pendente'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Prev Con Mov Est(CMM)'] = final_df['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'] = final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['DEE - Dias Em Est.'] = final_df['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Dias\nRessupr'] = final_df['Dias\nRessupr'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
-    final_df['Dias de seg.'] = final_df['Dias de seg.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 10)
-    final_df['Estoque Mínimo'] = final_df['Estoque Mínimo'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    for col in colunas_para_tratar:
+        default = 10 if col == 'Dias de seg.' else 0
+        final_df[col] = final_df[col].apply(lambda x: tratar_valor_numerico(x, default))
+
+    # final_df['Média 3M'] = final_df['Média 3M'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Cons Mes\nAnterior'] = final_df['Cons Mes\nAnterior'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Simulado \nPend Vendas'] = final_df['Simulado \nPend Vendas'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Est.Almox Central'] = final_df['Est.Almox Central'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Est. Produção'] = final_df['Est. Produção'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Estoque Total'] = final_df['Estoque Total'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Ped.Compras\n Pendente'] = final_df['Ped.Compras\n Pendente'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Prev Con Mov Est(CMM)'] = final_df['Prev Con Mov Est(CMM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'] = final_df['SIMULAÇÃO / (F.Pend/Fat.MM)'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['DEE - Dias Em Est.'] = final_df['DEE - Dias Em Est.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Dias\nRessupr'] = final_df['Dias\nRessupr'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
+    # final_df['Dias de seg.'] = final_df['Dias de seg.'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 10)
+    # final_df['Estoque Mínimo'] = final_df['Estoque Mínimo'].apply(lambda x: float(x.replace(".","").replace(",",".")) if x!='' else 0)
 
     final_df = final_df.groupby(["Descrição", "Código"]).agg({
         "Média 3M": "mean",
