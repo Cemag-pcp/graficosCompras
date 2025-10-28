@@ -15,33 +15,55 @@ from google.oauth2 import service_account
 def adicionar_dias_uteis(data_inicial, num_dias):
     """
     Adiciona ou subtrai um número específico de dias úteis, pulando fins de semana.
+    Trata valores nulos, inválidos e evita OverflowError.
 
     Args:
-        data_inicial: data de início (datetime.date ou datetime)
-        num_dias: número de dias úteis a adicionar (positivo) ou subtrair (negativo)
-
+        data_inicial: datetime.date ou datetime
+        num_dias: int (positivo para frente, negativo para trás)
     Returns:
-        datetime.date: data final após o ajuste
+        datetime.date
     """
-    if pd.isna(num_dias) or num_dias == 0:
-        return data_inicial  # Sem ajuste, retorna a mesma data
 
-    # Converte para datetime.date se necessário
+    # 1. Tratar casos nulos e inválidos
+    if pd.isna(num_dias) or num_dias == 0:
+        return data_inicial
+
+    try:
+        num_dias = int(num_dias)
+    except (ValueError, TypeError):
+        return data_inicial
+
+    # 2. Limite de segurança — evita estouro de data (±20.000 dias úteis ≈ 77 anos)
+    if abs(num_dias) > 20000:
+        return data_inicial
+
+    # 3. Garantir tipo date
     if isinstance(data_inicial, datetime):
         data_inicial = data_inicial.date()
 
-    data_atual = data_inicial
-    dias_restantes = abs(int(num_dias))
+    # 4. Calcular rapidamente, sem loop, com base no número de semanas completas
     incremento = 1 if num_dias > 0 else -1
+    dias_abs = abs(num_dias)
 
-    while dias_restantes > 0:
-        data_atual += timedelta(days=incremento)
-        # Se for dia útil, conta
-        if data_atual.weekday() < 5:  # 0=seg, 6=dom
-            dias_restantes -= 1
+    # semanas completas e resto de dias úteis
+    semanas, resto = divmod(dias_abs, 5)
+    dias_corridos = semanas * 7
 
-    return data_atual
+    # mover data base para frente ou para trás
+    data_final = data_inicial + timedelta(days=dias_corridos * incremento)
 
+    # agora aplicar os dias úteis restantes manualmente
+    while resto > 0:
+        data_final += timedelta(days=incremento)
+        if data_final.weekday() < 5:  # 0=Seg ... 4=Sex
+            resto -= 1
+
+    # 5. Proteger contra overflow final
+    try:
+        return data_final
+    except OverflowError:
+        return None
+    
 def processar_qde_ped(valor):
     if pd.isna(valor):
         return None  # ou 0, dependendo da sua regra
